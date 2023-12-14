@@ -1,3 +1,5 @@
+import ServerAPI from "./src/api/router";
+
 const BASE_PATH = "../";
 
 const DOMAIN_MAP = {
@@ -22,19 +24,20 @@ const server = Bun.serve({
         const file = Bun.file(filePath);
         return new Response(file);
     },
-    error() {
+    error(r) {
+        console.log("--SERVER_ERROR--", r);
         return new Response("Not Found", { status: 404 });
     },
 });
 
-const renderAPI = (req: Request) => {
+const renderAPI = async (req: Request) => {
     const url = new URL(req.url);
     const its = url.pathname.split("/");
     const action = its[2] || "";
     const params = its.slice(3);
-    const res = new Response(
-        JSON.stringify({ message: "Hello World", action, params })
-    );
+    const api = new ServerAPI(req, action, params);
+    const result = await api.run();
+    const res = new Response(JSON.stringify(result));
     res.headers.set("Access-Control-Allow-Origin", "*");
     res.headers.set(
         "Access-Control-Allow-Methods",
