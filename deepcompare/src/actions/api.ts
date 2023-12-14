@@ -12,7 +12,6 @@ export const callAPI = async (
         method: body ? "POST" : "GET",
         body: JSON.stringify(body),
     }).catch((err) => {
-        console.log(err);
         return new Response(JSON.stringify({ error: err, success: false }));
     });
     const data = await response.json();

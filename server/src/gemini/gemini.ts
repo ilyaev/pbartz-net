@@ -85,13 +85,23 @@ export default class GeminiAPI {
 
     resultAsJSON() {
         let res = this.response.text();
-        res = res.replace("```json", "").replace(/```/gi, "");
-        console.log(res);
+        res = res.replace("```json", "").replace(/```/gi, "").trim();
         if (res.indexOf("JSON") === 0) {
             res = res.substring(4);
         }
+        if (res.indexOf(" JSON") === 0) {
+            res = res.substring(5);
+        }
         if (res.indexOf("json") === 0) {
             res = res.substring(4);
+        }
+        if (res.indexOf(" json") === 0) {
+            res = res.substring(5);
+        }
+        res = res.replace(/\: undefined\,/gi, ": null,");
+        res = res.replace(/\: \"undefined\"\,/gi, ": null,");
+        if (res[0] !== "{") {
+            res = "{" + res.substring(res.indexOf("{") + 1);
         }
         return JSON.parse(res);
     }

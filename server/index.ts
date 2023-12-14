@@ -38,11 +38,13 @@ const renderAPI = async (req: Request) => {
     const api = new ServerAPI(req, action, params);
     const result = await api.run();
     const res = new Response(JSON.stringify(result));
-    res.headers.set("Access-Control-Allow-Origin", "*");
-    res.headers.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS"
-    );
+    if (process.env.NODE_ENV === "development") {
+        res.headers.set("Access-Control-Allow-Origin", "*");
+        res.headers.set(
+            "Access-Control-Allow-Methods",
+            "GET, POST, PUT, DELETE, OPTIONS"
+        );
+    }
     return res;
 };
 

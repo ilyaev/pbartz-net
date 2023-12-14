@@ -1,12 +1,13 @@
-import { Component } from "react";
+import { Component, BaseSyntheticEvent } from "react";
 import {
     Button,
     Container,
+    Dimmer,
     Divider,
     Form,
     Grid,
     Header,
-    Icon,
+    Loader,
     Segment,
     Table,
     TextArea,
@@ -15,8 +16,11 @@ import {
 import "semantic-ui-css/semantic.min.css";
 import "./App.css";
 import { callAPI } from "./actions/api";
+import { getRandomTestimonials } from "./components/testimonials";
 
 type DiffValue = string | Array<string> | object | number;
+
+const MAX_LEN = 1024 * 5;
 
 interface DiffItem {
     property: string;
@@ -37,6 +41,11 @@ interface State {
     file2: string;
     loading: boolean;
     result: DiffResult;
+    testimonials: {
+        name: string;
+        text: string;
+    }[];
+    error: string;
 }
 
 const BLANK_RESULT = {
@@ -51,8 +60,12 @@ interface Props {}
 class App extends Component<Props, State> {
     state = {
         loading: false,
+        testimonials: [],
         result: BLANK_RESULT,
-        file1: `{
+        error: "",
+        file1:
+            document.location.hostname === "localhost"
+                ? `{
             "compilerOptions": {
               "lib": ["ESNext"],
               "module": "esnext",
@@ -73,8 +86,11 @@ class App extends Component<Props, State> {
               ]
             }
           }
-          `,
-        file2: `{
+          `
+                : "",
+        file2:
+            document.location.hostname === "localhost"
+                ? `{
             "compilerOptions": {
               "lib": ["ESNext", "DOM"],
               "module": "esnext",
@@ -97,23 +113,56 @@ class App extends Component<Props, State> {
               ]
             }
           }
-          `,
+          `
+                : "",
     };
 
-    async compare() {
-        const b = sessionStorage.getItem("gemini");
-        if (b && b !== "undefined" && b[0] === "{") {
-            const res = JSON.parse(b);
-            this.setState({ result: res });
-            return res;
+    componentDidMount(): void {
+        if (this.state.testimonials.length > 0) {
+            return;
         }
-        this.setState({ loading: true });
+        const testimonials = getRandomTestimonials(3);
+        this.setState({ testimonials });
+    }
+
+    async compare() {
+        // const b = sessionStorage.getItem("gemini");
+        // if (b && b !== "undefined" && b[0] === "{") {
+        //     const res = JSON.parse(b);
+        //     this.setState({ result: res });
+        //     return res;
+        // }
+
+        if (
+            this.state.file1.length > MAX_LEN ||
+            this.state.file2.length > MAX_LEN
+        ) {
+            this.setState({
+                error: "File too large. Max size is 5kb",
+            });
+            return;
+        }
+
+        const testimonials = getRandomTestimonials(3);
+        this.setState({
+            loading: true,
+            error: "",
+            result: BLANK_RESULT,
+            testimonials,
+        });
         const res = await callAPI("gemini", ["config"], {
             file1: this.state.file1,
             file2: this.state.file2,
         });
-        sessionStorage.setItem("gemini", JSON.stringify(res.JSON));
-        this.setState({ result: res.JSON, loading: false });
+        if (!res.JSON || !res.JSON.type) {
+            this.setState({
+                loading: false,
+                error: "Error building results. Try again leter",
+            });
+        } else {
+            sessionStorage.setItem("gemini", JSON.stringify(res.JSON));
+            this.setState({ result: res.JSON, loading: false });
+        }
     }
 
     renderValue(value: DiffValue, def: string = "") {
@@ -183,60 +232,161 @@ class App extends Component<Props, State> {
         );
     }
 
+    renderTestimonials() {
+        const square = { height: 150 };
+        return (
+            <div style={{ paddingTop: "15px" }}>
+                <Container>
+                    <Header inverted as="h2">
+                        Testimonials: What people say
+                    </Header>
+                </Container>
+                <div style={{ paddingTop: "15px" }}></div>
+                <Grid stackable columns="3">
+                    {this.state.testimonials.map(
+                        (item: { name: string; text: string }) => {
+                            return (
+                                <Grid.Column>
+                                    <Segment style={square} textAlign="center">
+                                        <Header as="h2">
+                                            {item.name}
+                                            <Header.Subheader>
+                                                "<i>{item.text}</i>"
+                                            </Header.Subheader>
+                                        </Header>
+                                    </Segment>
+                                </Grid.Column>
+                            );
+                        }
+                    )}
+                </Grid>
+            </div>
+        );
+    }
+
+    onUpload(variable: string, e: BaseSyntheticEvent) {
+        if (e.target.files) {
+            e.preventDefault();
+
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                const text = e.target!.result as string;
+
+                variable === "file1"
+                    ? this.setState({ file1: text })
+                    : this.setState({ file2: text });
+            };
+
+            reader.readAsText(e.target.files[0]);
+        }
+    }
+
     render() {
         return (
             <div className="App">
                 <Segment inverted vertical textAlign="center">
-                    <Container>
-                        <Header inverted as="h1">
-                            Deep Compare Configuration Files
-                        </Header>
+                    <Container textAlign="left">
+                        <div>
+                            <Grid columns="equal">
+                                <Grid.Column>
+                                    <Header inverted as="h1">
+                                        Deep Compare:
+                                    </Header>
+                                </Grid.Column>
+                                <Grid.Column width={8}>
+                                    <p>
+                                        Succinct, yet thorough comparison of two
+                                        JSON (or other structured) files,
+                                        highlighting differences with detailed
+                                        explanations and insights into file
+                                        usage and impact
+                                    </p>
+                                    {/* <Segment>2</Segment> */}
+                                </Grid.Column>
+                                <Grid.Column>
+                                    {/* <Segment>3</Segment> */}
+                                </Grid.Column>
+                            </Grid>
+                        </div>
                     </Container>
                     <Container className="content">
                         <Form>
                             <Segment>
                                 <Grid columns={2} stackable textAlign="center">
-                                    <Divider vertical>Vs</Divider>
+                                    <Divider vertical>
+                                        <Button
+                                            primary
+                                            disabled={this.state.loading}
+                                            onClick={this.compare.bind(this)}
+                                        >
+                                            Compare
+                                        </Button>
+                                    </Divider>
                                     <Grid.Row verticalAlign="middle">
                                         <Grid.Column>
-                                            <Header>
-                                                <Icon name="file" />
-                                                File 1
-                                            </Header>
-
-                                            <TextArea
-                                                value={this.state.file1}
-                                                placeholder="Paste content of file 1"
-                                                rows="15"
-                                                onChange={(e) =>
-                                                    this.setState({
-                                                        file1: e.target.value,
-                                                    })
-                                                }
-                                            />
+                                            <div
+                                                style={{ paddingRight: "40px" }}
+                                            >
+                                                <Header>
+                                                    <input
+                                                        id="file"
+                                                        type="file"
+                                                        onChange={this.onUpload.bind(
+                                                            this,
+                                                            "file1"
+                                                        )}
+                                                    />
+                                                </Header>
+                                                <TextArea
+                                                    value={this.state.file1}
+                                                    placeholder="Paste content of file 1"
+                                                    rows="15"
+                                                    onChange={(e) =>
+                                                        this.setState({
+                                                            file1: e.target
+                                                                .value,
+                                                        })
+                                                    }
+                                                />
+                                            </div>
                                         </Grid.Column>
 
                                         <Grid.Column>
-                                            <Header>
-                                                <Icon name="file" />
-                                                File 2
-                                            </Header>
+                                            <div
+                                                style={{ paddingLeft: "40px" }}
+                                            >
+                                                <Header>
+                                                    <input
+                                                        id="file"
+                                                        type="file"
+                                                        onChange={this.onUpload.bind(
+                                                            this,
+                                                            "file2"
+                                                        )}
+                                                    />
+                                                </Header>
 
-                                            <TextArea
-                                                value={this.state.file2}
-                                                placeholder="Paste content of file 2"
-                                                rows="15"
-                                                onChange={(e) =>
-                                                    this.setState({
-                                                        file2: e.target.value,
-                                                    })
-                                                }
-                                            />
+                                                <TextArea
+                                                    value={this.state.file2}
+                                                    placeholder="Paste content of file 2"
+                                                    rows="15"
+                                                    onChange={(e) =>
+                                                        this.setState({
+                                                            file2: e.target
+                                                                .value,
+                                                        })
+                                                    }
+                                                />
+                                            </div>
                                         </Grid.Column>
                                     </Grid.Row>
                                 </Grid>
                             </Segment>
-                            <Segment.Inline>
+                            <Dimmer active={this.state.loading}>
+                                <Loader>Generating report...</Loader>
+                            </Dimmer>
+                            {/* <Segment.Inline>
                                 <Button
                                     primary
                                     disabled={this.state.loading}
@@ -244,16 +394,20 @@ class App extends Component<Props, State> {
                                 >
                                     Compare
                                 </Button>
-                            </Segment.Inline>
+                            </Segment.Inline> */}
+                            {this.state.error && (
+                                <Segment color="red" inverted>
+                                    {this.state.error}
+                                </Segment>
+                            )}
+                            {this.state.result.type
+                                ? undefined
+                                : this.renderTestimonials()}
                             {this.state.result.type &&
                                 !this.state.loading &&
                                 this.renderResults()}
                         </Form>
                     </Container>
-
-                    {/* <Segment inverted vertical as="footer">
-                        Cover template
-                    </Segment> */}
                 </Segment>
             </div>
         );

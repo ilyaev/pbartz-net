@@ -81,3 +81,19 @@ export const TESTIMONIALS = [
         text: "Deep Compare leaps ahead of other tools in terms of functionality and ease of use. It's been a game-changer for my development workflow.",
     },
 ]);
+
+export const getRandomTestimonials = (count: number) => {
+    const randomTestimonials = [];
+    const usedIndexes = new Set<number>(); // Keep track of used indexes
+
+    while (randomTestimonials.length < count) {
+        const randomIndex = Math.floor(Math.random() * TESTIMONIALS.length);
+
+        if (!usedIndexes.has(randomIndex)) {
+            randomTestimonials.push(TESTIMONIALS[randomIndex]);
+            usedIndexes.add(randomIndex);
+        }
+    }
+
+    return randomTestimonials;
+};
