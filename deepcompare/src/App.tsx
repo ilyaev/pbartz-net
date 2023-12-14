@@ -143,6 +143,13 @@ class App extends Component<Props, State> {
             return;
         }
 
+        if (this.state.file1.length < 100 || this.state.file2.length < 100) {
+            this.setState({
+                error: "File too small. Write something more meaningful",
+            });
+            return;
+        }
+
         const testimonials = getRandomTestimonials(3);
         this.setState({
             loading: true,
