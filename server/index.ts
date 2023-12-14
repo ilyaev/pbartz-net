@@ -5,6 +5,7 @@ const BASE_PATH = "../";
 const DOMAIN_MAP = {
     landing: "landing",
     ai: "ai",
+    deepcompare: "deepcompare",
 } as any;
 
 const server = Bun.serve({
@@ -48,4 +49,6 @@ const renderAPI = async (req: Request) => {
     return res;
 };
 
-console.log(`Listening on http://localhost:${server.port} ...`);
+console.log(
+    `Listening on http://localhost:${server.port} at ${process.env.NODE_ENV}...`
+);
