@@ -143,7 +143,7 @@ class App extends Component<Props, State> {
             return;
         }
 
-        if (this.state.file1.length < 100 || this.state.file2.length < 100) {
+        if (this.state.file1.length < 20 || this.state.file2.length < 20) {
             this.setState({
                 error: "File too small. Write something more meaningful",
             });
@@ -304,10 +304,11 @@ class App extends Component<Props, State> {
                                 <Grid.Column width={8}>
                                     <p>
                                         Succinct, yet thorough comparison of two
-                                        JSON (or other structured) files,
-                                        highlighting differences with detailed
-                                        explanations and insights into file
-                                        usage and impact
+                                        structured text files, highlighting
+                                        differences with detailed explanations
+                                        and insights into file usage and impact.
+                                        Works with JSON, YAML, XML, Dockerfile,
+                                        etc. And even code snippets.
                                     </p>
                                     {/* <Segment>2</Segment> */}
                                 </Grid.Column>
