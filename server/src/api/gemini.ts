@@ -34,6 +34,11 @@ export default class ServerAPIGemini {
         const api = new GeminiAPI(process.env.API_KEY_GEMINI || "");
 
         if (service === "config") {
+            if (!this.variables.file1 || !this.variables.file2) {
+                return {
+                    error: "Missing file1 or file2",
+                };
+            }
             api.promptFromTemplate(
                 "./src/gemini/prompts/config.tpl",
                 this.variables
