@@ -39,6 +39,13 @@ const server = Bun.serve({
         const file = Bun.file(filePath);
         return new Response(file);
     },
+    tls:
+        process.env.NODE_ENV === "production"
+            ? {
+                  key: Bun.file(process.env.KEY || ""),
+                  cert: Bun.file(process.env.CERT || ""),
+              }
+            : undefined,
     error(r) {
         console.log("ERROR:", r);
         return new Response("Not Found", { status: 404 });
@@ -65,5 +72,17 @@ const renderAPI = async (req: Request, ip: string, ts: string) => {
 };
 
 console.log(
-    `Listening on http://localhost:${server.port} at ${process.env.NODE_ENV}...`
+    `Listening on https://localhost:${server.port} at ${process.env.NODE_ENV}...`
 );
+
+if (process.env.NODE_ENV === "production") {
+    const httpServer = Bun.serve({
+        port: 80,
+        fetch(req: Request) {
+            return Response.redirect("https://" + req.headers.get("host"));
+        },
+    });
+    console.log(
+        `Listening on http://localhost:${server.port} at ${process.env.NODE_ENV}... (redirecting to https)`
+    );
+}
