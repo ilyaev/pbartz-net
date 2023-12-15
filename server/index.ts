@@ -29,7 +29,14 @@ const server = Bun.serve({
             return renderAPI(req, ip, ts);
         }
         if (pathname.indexOf("/index.html") > -1) {
-            console.log(ts + ": INDEX: ", pathname, " IP", ip);
+            console.log(
+                ts + ": INDEX: ",
+                pathname,
+                " IP",
+                ip,
+                "DOMAINS: ",
+                domains
+            );
         }
         const is_excluded = EXCLUSIONS.some((ex) => pathname.indexOf(ex) > -1);
         if (is_excluded) {
@@ -79,10 +86,11 @@ if (process.env.NODE_ENV === "production") {
     const httpServer = Bun.serve({
         port: 80,
         fetch(req: Request) {
+            console.log("REDIRECT: ", req.headers.get("host"), " -> https");
             return Response.redirect("https://" + req.headers.get("host"));
         },
     });
     console.log(
-        `Listening on http://localhost:${server.port} at ${process.env.NODE_ENV}... (redirecting to https)`
+        `Listening on http://localhost:80 at ${process.env.NODE_ENV}... (redirecting to https)`
     );
 }
