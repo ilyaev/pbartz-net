@@ -34,7 +34,7 @@ export default class GeminiAPI {
             temperature: 0.9,
             topK: 1,
             topP: 1,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 2048 * 5,
         };
 
         this.safetySettings = [
@@ -67,17 +67,23 @@ export default class GeminiAPI {
         this.parts = [{ text: content }];
     }
 
-    async run() {
+    async run(extra: any = {}) {
         if (this.parts.length === 0) {
             return {
                 text: () => "No prompt provided",
             } as EnhancedGenerateContentResponse;
         }
-        const result = await this.model.generateContent({
-            contents: [{ role: "user", parts: this.parts }],
-            generationConfig: this.generationConfig,
-            safetySettings: this.safetySettings,
-        });
+        const result = await this.model.generateContent(
+            Object.assign(
+                {},
+                {
+                    contents: [{ role: "user", parts: this.parts }],
+                    generationConfig: this.generationConfig,
+                    safetySettings: this.safetySettings,
+                },
+                extra
+            )
+        );
 
         this.response = result.response;
         return this.response;
