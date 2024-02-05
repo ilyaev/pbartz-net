@@ -5,6 +5,7 @@ const BASE_PATH = "../";
 const DOMAIN_MAP = {
     landing: "landing",
     ai: "ai",
+    visualizer: "viz",
     deepcompare: "deepcompare",
 } as any;
 
@@ -12,7 +13,7 @@ const EXCLUSIONS = ["favicon.ico", ".env"];
 
 const server = Bun.serve({
     port: process.env.PORT || 80,
-    fetch(req: Request) {
+    async fetch(req: Request) {
         const IP: any = server.requestIP(req);
         let ip = IP ? IP.address || "" : "";
         ip = ip.replace("::ffff:", "");
@@ -25,9 +26,13 @@ const server = Bun.serve({
         const ts = new Date().toLocaleString();
 
         if (pathname === "/") pathname = "/index.html";
+
         if (pathname.indexOf("/api") === 0) {
             return renderAPI(req, ip, ts);
         }
+
+        let spotifyToken = "";
+
         if (pathname.indexOf("/index.html") > -1) {
             console.log(
                 ts + ": INDEX: ",
@@ -37,6 +42,7 @@ const server = Bun.serve({
                 "DOMAINS: ",
                 domains
             );
+            spotifyToken = req.headers.get("spotify-token") || "";
         }
         const is_excluded = EXCLUSIONS.some((ex) => pathname.indexOf(ex) > -1);
         if (is_excluded) {
@@ -44,7 +50,24 @@ const server = Bun.serve({
         }
         const filePath = BASE_PATH + dir + "/dist" + pathname;
         const file = Bun.file(filePath);
-        return new Response(file);
+
+        if (filePath.indexOf("dist/index.html") > -1 && dir === "viz") {
+            if (!url.searchParams.get("token") && !spotifyToken) {
+                return new Response("Not Found", { status: 404 });
+            }
+        }
+
+        if (filePath.indexOf("dist/index.html") > -1 && spotifyToken) {
+            const text = await file.text();
+            return new Response(text.replace("%SPOTIFY_TOKEN%", spotifyToken), {
+                headers: {
+                    "Content-Type": "text/html;charset=utf-8",
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                },
+            });
+        } else {
+            return new Response(file);
+        }
     },
     tls:
         process.env.NODE_ENV === "production"
@@ -65,9 +88,17 @@ const renderAPI = async (req: Request, ip: string, ts: string) => {
     const action = its[2] || "";
     const params = its.slice(3);
     const api = new ServerAPI(req, action, params);
+    console.log(
+        ts + ":",
+        "API CALL:",
+        action,
+        JSON.stringify(params),
+        JSON.stringify(api.getParams),
+        "IP",
+        ip
+    );
     const result = await api.run();
     const res = new Response(JSON.stringify(result));
-    console.log(ts + ":", "API CALL:", action, params, "IP", ip);
     if (process.env.NODE_ENV === "development") {
         res.headers.set("Access-Control-Allow-Origin", "*");
         res.headers.set(

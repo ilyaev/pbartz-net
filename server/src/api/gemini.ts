@@ -8,7 +8,13 @@ export default class ServerAPIGemini {
 
     public static ROUTE = "gemini";
 
-    constructor(req: Request, action: string, params: string[], body?: string) {
+    constructor(
+        req: Request,
+        action: string,
+        params: string[],
+        body?: string,
+        getParams?: { [s: string]: string }
+    ) {
         this.req = req;
         this.action = action;
         this.params = params;
@@ -20,6 +26,9 @@ export default class ServerAPIGemini {
                 obj = {};
             }
             this.variables = obj;
+        }
+        if (getParams) {
+            this.variables = { ...this.variables, ...getParams };
         }
     }
 
@@ -43,12 +52,42 @@ export default class ServerAPIGemini {
                 "./src/gemini/prompts/config.tpl",
                 this.variables
             );
+        } else if (service === "track") {
+            if (!this.variables.artist || !this.variables.track) {
+                return {
+                    error: "Missing parameters",
+                };
+            }
+            api.promptFromTemplate(
+                "./src/gemini/prompts/track.tpl",
+                this.variables
+            );
         }
 
         res.parts = api.parts;
-        const result = await api.run();
-        res.JSON = api.resultAsJSON();
-        res.text = result.text();
+        try {
+            const result = await api.run();
+            res.JSON = api.resultAsJSON();
+            res.text = result.text();
+        } catch (e) {
+            res.JSON = {};
+            res.text = "";
+            res.error = e;
+        }
+
+        if (service === "track") {
+            if (!res.JSON || !res.JSON.description) {
+                res.JSON.description =
+                    "Cannot find anything this time. Try again later.";
+                res.JSON.facts = res.JSON.facts || [];
+                res.JSON.similar_tracks = res.JSON.similar_tracks || [];
+                res.JSON.genres = res.JSON.genres || [];
+            }
+        }
+
+        if (this.variables.json) {
+            return res.JSON;
+        }
 
         return res;
     }

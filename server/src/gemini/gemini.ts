@@ -109,6 +109,11 @@ export default class GeminiAPI {
         if (res[0] !== "{") {
             res = "{" + res.substring(res.indexOf("{") + 1);
         }
-        return JSON.parse(res);
+        try {
+            return JSON.parse(res);
+        } catch (e) {
+            console.log("ERROR: ", e, "RESPONSE: ", res, "END");
+            return {};
+        }
     }
 }

@@ -11,6 +11,9 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.1.2"
+    "@google/generative-ai": "^0.1.2",
+    "@types/get-pixels": "^3.3.4",
+    "extract-colors": "^4.0.2",
+    "get-pixels": "^3.3.3"
   }
 }
