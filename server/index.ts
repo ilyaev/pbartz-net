@@ -7,6 +7,7 @@ const DOMAIN_MAP = {
     ai: "ai",
     visualizer: "viz",
     deepcompare: "deepcompare",
+    spot: "spot",
 } as any;
 
 const EXCLUSIONS = ["favicon.ico", ".env"];
