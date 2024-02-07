@@ -207,7 +207,7 @@ class App extends Component<Props, State> {
         if (!this.state.playerState.is_playing) {
             return (
                 <div className="App" style={{ padding: "10px" }}>
-                    Not playing
+                    Not playing State - {JSON.stringify(this.state.playerState)}
                 </div>
             );
         }
