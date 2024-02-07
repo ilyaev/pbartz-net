@@ -204,6 +204,13 @@ export class VizScene extends Component<Params, State> {
                         width={100}
                         src={this.props.playbackState.item.album.images[1].url}
                     />
+                    <div>
+                        <img
+                            src="/spotify_logo.png"
+                            width={120}
+                            style={{ margin: "15px" }}
+                        />
+                    </div>
                 </div>
             </>
         );
