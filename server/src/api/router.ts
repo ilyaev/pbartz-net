@@ -1,6 +1,7 @@
 import ServerAPIAudioDB from "./audiodb";
 import ServerAPIGemini from "./gemini";
 import ServerAPIImage from "./image";
+import ServerAPIFinances from "./finance";
 
 function containsNonAscii(str: string) {
     // This regular expression matches any character that is not in the ASCII range.
@@ -33,6 +34,16 @@ export default class ServerAPI {
         const body = await this.req.text();
 
         switch (this.action) {
+            case ServerAPIFinances.ROUTE:
+                const finances = new ServerAPIFinances(
+                    this.req,
+                    this.action,
+                    this.params,
+                    body,
+                    this.getParams
+                );
+                res = await finances.run();
+                break;
             case ServerAPIImage.ROUTE:
                 const image = new ServerAPIImage(
                     this.req,
