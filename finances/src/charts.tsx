@@ -150,7 +150,15 @@ class FinCharts extends Component<Props, State> {
                 )}
                 {data.pie.length === 1 && data.bar.length === 1 && (
                     <ResponsiveContainer width={"96%"} height={"50%"}>
-                        <BarChart data={data.days.reverse()}>
+                        <BarChart
+                            data={data.days.reverse()}
+                            onClick={(data) => {
+                                this.props.onSelect(
+                                    "month",
+                                    data.activeLabel || ""
+                                );
+                            }}
+                        >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="Day" />
                             <YAxis />

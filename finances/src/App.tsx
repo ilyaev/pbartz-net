@@ -36,7 +36,9 @@ class App extends Component<Props, State> {
     };
 
     async componentDidMount() {
-        const data = await callAPI("finances", ["rows"], {});
+        const data = await callAPI("finances", ["rows"], {
+            email: (localStorage.getItem("email") || "").replace(/"/g, ""),
+        });
         const categories = data.result.reduce((acc: string[], row: Row) => {
             if (acc.indexOf(row.category) === -1) {
                 acc.push(row.category);
@@ -145,6 +147,9 @@ class App extends Component<Props, State> {
                     <FinToolbar
                         categories={this.state.categories}
                         onChange={this.onFilter}
+                        total={this.state.rows.reduce((acc, row) => {
+                            return acc + parseFloat(row.amount);
+                        }, 0)}
                     />
                 )}
                 {this.state.initialized && (

@@ -9,10 +9,14 @@ interface Props {
 }
 interface State {}
 
-const currencyFormatter = new Intl.NumberFormat(navigator.language, {
+export const currencyFormatter = new Intl.NumberFormat(navigator.language, {
     style: "currency",
     currency: "usd",
 });
+
+function isIpad() {
+    return /iPad/.test(navigator.userAgent);
+}
 
 class FinGrid extends Component<Props, State> {
     state = {};
@@ -24,7 +28,7 @@ class FinGrid extends Component<Props, State> {
                 key: "description",
                 name: "Description",
                 renderCell: (props: { row: Row }) => {
-                    return props.row.description.slice(0, 45);
+                    return props.row.description.slice(0, isIpad() ? 25 : 45);
                 },
             },
 
@@ -65,14 +69,14 @@ class FinGrid extends Component<Props, State> {
                 },
             },
             { key: "category", name: "Category" },
-            { key: "source", name: "Source" },
+            { key: "source", name: "Bank" },
         ];
 
         return (
             <DataGrid
                 columns={columns}
                 rows={this.props.rows}
-                className={"fill-grid"}
+                className={"fill-grid rdg-light"}
                 bottomSummaryRows={[
                     {
                         id: "total_0",

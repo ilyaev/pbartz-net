@@ -1,6 +1,8 @@
+import { googleLogout } from "@react-oauth/google";
 import { Component } from "react";
 import "react-data-grid/lib/styles.css";
-import { Button, Dropdown, Input } from "semantic-ui-react";
+import { Button, Dropdown, Header, Input } from "semantic-ui-react";
+import { currencyFormatter } from "./grid";
 
 export interface State {
     search: string;
@@ -11,6 +13,7 @@ export interface State {
 
 interface Props {
     categories: string[];
+    total: number;
     onChange: (params: State, skip: boolean) => void;
 }
 
@@ -87,6 +90,7 @@ class FinToolbar extends Component<Props, State> {
                 value: category,
             };
         });
+
         return (
             <div className="toolbar">
                 <Input
@@ -156,6 +160,26 @@ class FinToolbar extends Component<Props, State> {
                         }}
                     >
                         Reset
+                    </Button>
+                </div>
+                <div
+                    style={{ flex: 1, marginTop: "10px", textAlign: "center" }}
+                >
+                    <Header as="h3">
+                        {currencyFormatter.format(this.props.total)}
+                    </Header>
+                </div>
+                <div className="toolbar-button-logout">
+                    <Button
+                        onClick={() => {
+                            localStorage.setItem("email", "");
+                            googleLogout();
+                            setTimeout(() => {
+                                document.location.reload();
+                            }, 500);
+                        }}
+                    >
+                        Log Out
                     </Button>
                 </div>
             </div>

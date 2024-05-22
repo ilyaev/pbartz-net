@@ -56,8 +56,17 @@ export default class ServerAPIFinances {
                 res.result = existingRows.length + " rows loaded";
                 break;
             case "rows":
-                const allrows = await getRows();
-                res.result = allrows;
+                const key = this.variables.email || "";
+                if (
+                    ["ilyaev@gmail.com", "dianailiaiev@gmail.com"].indexOf(
+                        key
+                    ) == -1
+                ) {
+                    res.result = [];
+                } else {
+                    const allrows = await getRows();
+                    res.result = allrows;
+                }
                 break;
             case "categories":
                 const existingCategories = await getCategories();

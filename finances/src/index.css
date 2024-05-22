@@ -29,11 +29,27 @@
 
 .dropdown {
     margin-left: 5px;
-    width: 36.3vw;
+    width: 32.7vw;
 }
 
 .toolbar-button {
     margin-left: 10px;
+}
+
+.loginform {
+    /* display: flex; */
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100%;
+    width: 100vw;
+    vertical-align: middle;
+    align-self: center;
+    /* border: 1px solid #000; */
+}
+
+.toolbar-button-logout {
+    margin-right: 30px;
 }
 
 a {
