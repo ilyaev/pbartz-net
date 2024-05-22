@@ -49,9 +49,10 @@ function Login() {
         <App />
     ) : (
         <>
-            <div style={{ height: "40vh" }}></div>
+            <div style={{ height: "36vh" }}></div>
             <div className="loginform">
-                <h1>Spending Spree</h1>
+                <img src="/icon2.svg" width="100" />
+                <h1 style={{ marginTop: "-10px" }}>Spending Spree</h1>
                 <button onClick={login}>Sign in with Google </button>
             </div>
         </>

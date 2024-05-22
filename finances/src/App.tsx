@@ -111,8 +111,15 @@ class App extends Component<Props, State> {
 
     onChartSelect = (type: string, selection: string) => {
         const hash = document.location.hash.replace(/^#/, "");
-        if (type === "month") {
-            const date = selection.split("/").reverse().join("-");
+        if (type === "month" || type === "date") {
+            let date = selection.split("/").reverse().join("-");
+            if (type === "date") {
+                if (this.state.filters.date.length === 7) {
+                    date = selection;
+                } else {
+                    date = selection.split("-").slice(0, 2).join("-");
+                }
+            }
             let newHash = hash
                 .split("&")
                 .map((one) =>
@@ -162,7 +169,10 @@ class App extends Component<Props, State> {
                                 width: "50vw",
                             }}
                         >
-                            <FinGrid rows={this.state.rows} />
+                            <FinGrid
+                                rows={this.state.rows}
+                                onSelect={this.onChartSelect}
+                            />
                         </div>
                         <div
                             style={{
@@ -174,6 +184,7 @@ class App extends Component<Props, State> {
                             <FinCharts
                                 rows={this.state.rows}
                                 search={this.state.filters.search}
+                                date={this.state.filters.date}
                                 onSelect={this.onChartSelect}
                             />
                         </div>

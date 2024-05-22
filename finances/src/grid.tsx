@@ -6,6 +6,7 @@ import { Row } from "./App";
 
 interface Props {
     rows: Row[];
+    onSelect: (type: string, value: string) => void;
 }
 interface State {}
 
@@ -23,7 +24,21 @@ class FinGrid extends Component<Props, State> {
 
     render() {
         const columns = [
-            { key: "date", name: "Date" },
+            {
+                key: "date",
+                name: "Date",
+                renderCell: (props: { row: Row }) => {
+                    return (
+                        <div
+                            onClick={() => {
+                                this.props.onSelect("date", props.row.date);
+                            }}
+                        >
+                            {props.row.date}
+                        </div>
+                    );
+                },
+            },
             {
                 key: "description",
                 name: "Description",
@@ -68,7 +83,24 @@ class FinGrid extends Component<Props, State> {
                     );
                 },
             },
-            { key: "category", name: "Category" },
+            {
+                key: "category",
+                name: "Category",
+                renderCell: (props: { row: Row }) => {
+                    return (
+                        <div
+                            onClick={() => {
+                                this.props.onSelect(
+                                    "category",
+                                    props.row.category
+                                );
+                            }}
+                        >
+                            {props.row.category}
+                        </div>
+                    );
+                },
+            },
             { key: "source", name: "Bank" },
         ];
 

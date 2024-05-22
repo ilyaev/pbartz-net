@@ -16,6 +16,7 @@ import { description2gropName } from "./api";
 interface Props {
     rows: Row[];
     search: string;
+    date: string;
     onSelect: (type: string, value: string) => void;
 }
 interface State {}
@@ -136,6 +137,27 @@ class FinCharts extends Component<Props, State> {
                         </BarChart>
                     </ResponsiveContainer>
                 )}
+                {((data.pie.length === 1 && data.bar.length === 1) ||
+                    this.props.date.length === 7) && (
+                    <ResponsiveContainer width={"96%"} height={"50%"}>
+                        <BarChart
+                            data={data.days.reverse()}
+                            onClick={(data) => {
+                                this.props.onSelect(
+                                    "month",
+                                    data.activeLabel || ""
+                                );
+                            }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="Day" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="Amount" fill="#82ca9d" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                )}
                 {data.pie.length > 1 && (
                     <ResponsiveContainer width={"96%"} height={"50%"}>
                         <BarChart
@@ -156,26 +178,7 @@ class FinCharts extends Component<Props, State> {
                         </BarChart>
                     </ResponsiveContainer>
                 )}
-                {data.pie.length === 1 && data.bar.length === 1 && (
-                    <ResponsiveContainer width={"96%"} height={"50%"}>
-                        <BarChart
-                            data={data.days.reverse()}
-                            onClick={(data) => {
-                                this.props.onSelect(
-                                    "month",
-                                    data.activeLabel || ""
-                                );
-                            }}
-                        >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="Day" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="Amount" fill="#82ca9d" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                )}
+
                 {data.pie.length === 1 && (
                     <ResponsiveContainer width={"96%"} height={"50%"}>
                         <BarChart data={data.descr}>
