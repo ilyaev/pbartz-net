@@ -82,6 +82,7 @@ class App extends Component<Props, State> {
         const date = params.date || "";
         this.setState({
             initialized: true,
+            filters: params,
             rows: this.state.allRows.filter((row: Row) => {
                 if (
                     search &&
@@ -172,6 +173,7 @@ class App extends Component<Props, State> {
                         >
                             <FinCharts
                                 rows={this.state.rows}
+                                search={this.state.filters.search}
                                 onSelect={this.onChartSelect}
                             />
                         </div>

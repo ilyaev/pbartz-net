@@ -11,9 +11,11 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import moment from "moment";
+import { description2gropName } from "./api";
 
 interface Props {
     rows: Row[];
+    search: string;
     onSelect: (type: string, value: string) => void;
 }
 interface State {}
@@ -27,7 +29,6 @@ class FinCharts extends Component<Props, State> {
         const dictDays = {} as { [key: string]: number };
         const dictDescriptions = {} as { [key: string]: number };
         const categories = [] as string[];
-        const descriptions = [] as string[];
         const months = [] as string[];
         this.props.rows.forEach((row) => {
             const date = moment(row.date).format("MM/YYYY");
@@ -36,9 +37,6 @@ class FinCharts extends Component<Props, State> {
             }
             if (months.indexOf(date) === -1) {
                 months.push(date);
-            }
-            if (descriptions.indexOf(row.description.trim()) === -1) {
-                descriptions.push(row.description.trim());
             }
             if (!dict[date]) {
                 dict[date] = 0;
@@ -55,8 +53,10 @@ class FinCharts extends Component<Props, State> {
                 dictDays[day] = 0;
             }
             dictDays[day] += parseFloat(row.amount);
-
-            const descr = row.description.trim().toLowerCase();
+            let descr = row.description.trim().toLowerCase();
+            if (!this.props.search) {
+                descr = description2gropName(descr);
+            }
             if (!dictDescriptions[descr]) {
                 dictDescriptions[descr] = 0;
             }
@@ -81,24 +81,32 @@ class FinCharts extends Component<Props, State> {
                         Amount: parseFloat(dict[key].toFixed(2)),
                     };
                 }),
-            pie: Object.keys(dictPie).map((key) => {
-                return {
-                    Category: key,
-                    Amount: parseFloat(dictPie[key].toFixed(2)),
-                };
-            }),
+            pie: Object.keys(dictPie)
+                .sort((a, b) => {
+                    return dictPie[b] - dictPie[a];
+                })
+                .map((key) => {
+                    return {
+                        Category: key,
+                        Amount: parseFloat(dictPie[key].toFixed(2)),
+                    };
+                }),
             days: Object.keys(dictDays).map((key) => {
                 return {
                     Day: key,
                     Amount: parseFloat(dictDays[key].toFixed(2)),
                 };
             }),
-            descr: Object.keys(dictDescriptions).map((key) => {
-                return {
-                    Description: key,
-                    Amount: parseFloat(dictDescriptions[key].toFixed(2)),
-                };
-            }),
+            descr: Object.keys(dictDescriptions)
+                .sort((a, b) => {
+                    return dictDescriptions[b] - dictDescriptions[a];
+                })
+                .map((key) => {
+                    return {
+                        Description: key,
+                        Amount: parseFloat(dictDescriptions[key].toFixed(2)),
+                    };
+                }),
         };
     }
 
