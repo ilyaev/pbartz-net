@@ -1,12 +1,12 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
-import { useGoogleLogin } from "@react-oauth/google";
+import React, { useState, useEffect } from "react";
+import { googleLogout, useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import App from "./App";
 
 function Login() {
     const [user, setUser] = useState([]);
-    const [setProfile] = useState([]);
+    const [profile, setProfile] = useState([]);
 
     const login = useGoogleLogin({
         onSuccess: (codeResponse) => {
@@ -40,6 +40,10 @@ function Login() {
     }, [user]);
 
     // log out function to log the user out of google and set the profile array to null
+    const logOut = () => {
+        googleLogout();
+        setProfile(null);
+    };
 
     return localStorage.getItem("email") ? (
         <App />
