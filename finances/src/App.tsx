@@ -56,7 +56,8 @@ class App extends Component<Props, State> {
             .filter((a: Row) =>
                 parseFloat(a.amount) > 0 &&
                 a.description.indexOf("UCSCEPAY") === -1 &&
-                a.description.indexOf("DR ADJ REDIST") === -1
+                a.description.indexOf("DR ADJ REDIST") === -1 &&
+                a.description.indexOf("HIMS & HERS") === -1
                     ? true
                     : false
             )
