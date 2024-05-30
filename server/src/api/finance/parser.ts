@@ -29,8 +29,12 @@ export const readStatements = (statements: any) => {
     return rows;
 };
 
-export const parseStatement = (file: string, source: string) => {
-    const content = fs.readFileSync(file, "utf8");
+export const parseStatement = (
+    file: string,
+    source: string,
+    _content: string = ""
+) => {
+    const content = _content || fs.readFileSync(file, "utf8");
     const rows = [] as any[];
     if (source === "boa") {
         const lines = content.split("\n");
@@ -40,43 +44,63 @@ export const parseStatement = (file: string, source: string) => {
             if (account === "cc") {
                 const isCSV = line.includes('","') ? true : false;
                 const parts = isCSV ? line.split(",") : line.split(" ");
+                try {
+                    const transDate = (
+                        isCSV
+                            ? moment(parts[0])
+                            : moment(year + "-" + parts[0].replace("/", "-"))
+                    ).format("YYYY-MM-DD");
 
-                const transDate = (
-                    isCSV
-                        ? moment(parts[0])
-                        : moment(year + "-" + parts[0].replace("/", "-"))
-                ).format("YYYY-MM-DD");
+                    const amount = isCSV
+                        ? parseFloat(parts[4]) * -1
+                        : parseFloat(parts[parts.length - 1]);
 
-                const amount = isCSV
-                    ? parseFloat(parts[4]) * -1
-                    : parts[parts.length - 1];
+                    const description = isCSV
+                        ? parts[2].replace(/"/gi, "")
+                        : parts.slice(2, parts.length - 3).join(" ");
 
-                const description = isCSV
-                    ? parts[2].replace(/"/gi, "")
-                    : parts.slice(2, parts.length - 3).join(" ");
-
-                rows.push({ date: transDate, amount, description, source });
+                    if (
+                        description &&
+                        !isNaN(amount) &&
+                        transDate !== "Invalid date"
+                    ) {
+                        rows.push({
+                            date: transDate,
+                            amount,
+                            description,
+                            source,
+                        });
+                    }
+                } catch (e) {}
             } else if (account === "debit") {
                 const parts = line.replace(/(?<=\d),(?=\d)/, "").split(",");
                 const transDate = moment(parts[0], "MM/DD/YYYY").format(
                     "YYYY-MM-DD"
                 );
-                const amount =
-                    parseFloat(
-                        parts[2].replace(/"/gi, "").replace(/\,/gi, "")
-                    ) * -1;
-                const description = parts[1].replace(/"/gi, "");
-                if (
-                    description.indexOf("AMERICAN EXPRESS DES:ACH PMT") ===
-                        -1 &&
-                    description.indexOf("Online Banking") === -1
-                )
-                    rows.push({
-                        date: transDate,
-                        amount,
-                        description,
-                        source,
-                    });
+                try {
+                    const amount =
+                        parseFloat(
+                            parts[2].replace(/"/gi, "").replace(/\,/gi, "")
+                        ) * -1;
+                    const description = parts[1].replace(/"/gi, "");
+                    if (
+                        description.indexOf("AMERICAN EXPRESS DES:ACH PMT") ===
+                            -1 &&
+                        description.indexOf("Online Banking") === -1
+                    )
+                        if (
+                            description &&
+                            !isNaN(amount) &&
+                            transDate !== "Invalid date"
+                        ) {
+                            rows.push({
+                                date: transDate,
+                                amount,
+                                description,
+                                source,
+                            });
+                        }
+                } catch (e) {}
             }
         });
     } else if (source === "amex") {

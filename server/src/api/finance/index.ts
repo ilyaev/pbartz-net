@@ -1,5 +1,5 @@
 import { getCategories, getDB, getRows, updateRows } from "./db";
-import { readStatements, scanStatements } from "./parser";
+import { parseStatement, readStatements, scanStatements } from "./parser";
 import GeminiAPI from "../../gemini/gemini";
 
 export default class ServerAPIFinances {
@@ -64,6 +64,19 @@ export default class ServerAPIFinances {
                 ) {
                     res.result = [];
                 } else {
+                    if (this.variables.content && this.variables.source) {
+                        const rows = parseStatement(
+                            this.variables.source,
+                            this.variables.source.includes("amex")
+                                ? "amex"
+                                : "boa",
+                            this.variables.content
+                        );
+                        if (rows.length > 0) {
+                            let existingRows = await getRows();
+                            await updateRows(rows, existingRows);
+                        }
+                    }
                     const allrows = await getRows();
                     res.result = allrows;
                 }
