@@ -150,6 +150,12 @@ class App extends Component<Props, State> {
             document.location.hash = newHash;
         }
         if (type === "category") {
+            if (
+                this.state.filters.categories.indexOf(selection) !== -1 &&
+                this.state.filters.categories.length === 1
+            ) {
+                selection = "";
+            }
             let newHash = hash
                 .split("&")
                 .map((one) =>
@@ -157,8 +163,9 @@ class App extends Component<Props, State> {
                         ? one
                         : "categories=" + encodeURIComponent(selection)
                 )
+                .filter((one) => one.indexOf("categories=") === -1 || selection)
                 .join("&");
-            if (newHash.indexOf("categories=") === -1) {
+            if (newHash.indexOf("categories=") === -1 && selection.length > 0) {
                 newHash += `&categories=${selection}`;
             }
             document.location.hash = newHash;
