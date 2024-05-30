@@ -31,6 +31,14 @@ class FinCharts extends Component<Props, State> {
         const dictDescriptions = {} as { [key: string]: number };
         const categories = [] as string[];
         const months = [] as string[];
+        if (this.props.date.length === 7) {
+            for (let i = 31; i > 0; i--) {
+                const d = i + "";
+                dictDays[
+                    this.props.date + "-" + (d.length === 1 ? `0${d}` : d)
+                ] = 0;
+            }
+        }
         this.props.rows.forEach((row) => {
             const date = moment(row.date).format("MM/YYYY");
             if (categories.indexOf(row.category) === -1) {
