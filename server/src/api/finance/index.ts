@@ -46,6 +46,8 @@ export default class ServerAPIFinances {
 
         const db = await getDB();
 
+        const key = this.variables.email || "";
+
         switch (service) {
             case "reload":
                 const statements = scanStatements();
@@ -56,7 +58,6 @@ export default class ServerAPIFinances {
                 res.result = existingRows.length + " rows loaded";
                 break;
             case "rows":
-                const key = this.variables.email || "";
                 if (
                     ["ilyaev@gmail.com", "dianailiaiev@gmail.com"].indexOf(
                         key
@@ -79,6 +80,37 @@ export default class ServerAPIFinances {
                     }
                     const allrows = await getRows();
                     res.result = allrows;
+                }
+                break;
+            case "category":
+                if (
+                    ["ilyaev@gmail.com", "dianailiaiev@gmail.com"].indexOf(
+                        key
+                    ) == -1
+                ) {
+                    res.result = [];
+                } else {
+                    const category = this.variables.category || "";
+                    const description = this.variables.description || "";
+
+                    //update record
+                    if (
+                        category &&
+                        category.length &&
+                        description &&
+                        description.length
+                    ) {
+                        db.run(
+                            "UPDATE categories SET category = ? WHERE description = ?",
+                            [category, description]
+                        );
+                    }
+
+                    res.result =
+                        "category updated to " +
+                        category +
+                        " for " +
+                        description;
                 }
                 break;
             case "categories":

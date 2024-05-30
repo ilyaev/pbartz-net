@@ -6,6 +6,7 @@ import FinGrid from "./grid";
 import FinCharts from "./charts";
 import FinToolbar from "./toolbar";
 import { State as ToolbarState } from "./toolbar";
+import CategoryModal from "./category";
 
 export interface Row {
     date: string;
@@ -23,6 +24,9 @@ interface State {
     categories: string[];
     filters: ToolbarState;
     initialized: boolean;
+    categoryModal: boolean;
+    categoryDescription: string;
+    category: string;
 }
 
 class App extends Component<Props, State> {
@@ -33,6 +37,9 @@ class App extends Component<Props, State> {
         categories: [],
         filters: {} as ToolbarState,
         initialized: false,
+        categoryModal: false,
+        categoryDescription: "",
+        category: "",
     };
 
     async componentDidMount() {
@@ -48,7 +55,8 @@ class App extends Component<Props, State> {
         const rows = data.result
             .filter((a: Row) =>
                 parseFloat(a.amount) > 0 &&
-                a.description.indexOf("UCSCEPAY") === -1
+                a.description.indexOf("UCSCEPAY") === -1 &&
+                a.description.indexOf("DR ADJ REDIST") === -1
                     ? true
                     : false
             )
@@ -111,6 +119,14 @@ class App extends Component<Props, State> {
 
     onChartSelect = (type: string, selection: string) => {
         const hash = document.location.hash.replace(/^#/, "");
+        if (type === "description") {
+            this.setState({
+                categoryModal: true,
+                categoryDescription: selection.split("|||")[0],
+                category: selection.split("|||")[1],
+            });
+            return;
+        }
         if (type === "month" || type === "date") {
             let date = selection.split("/").reverse().join("-");
             if (type === "date") {
@@ -148,9 +164,33 @@ class App extends Component<Props, State> {
         }
     };
 
+    renderModal() {
+        if (!this.state.categoryModal) {
+            return null;
+        }
+        return (
+            <CategoryModal
+                categoryDescription={this.state.categoryDescription}
+                category={this.state.category}
+                onClose={(reload) => {
+                    this.setState({
+                        categoryModal: false,
+                        categoryDescription: "",
+                    });
+                    if (reload) {
+                        setTimeout(() => {
+                            document.location.reload();
+                        }, 1000);
+                    }
+                }}
+            />
+        );
+    }
+
     render() {
         return (
             <>
+                {this.renderModal()}
                 {this.state.loaded && (
                     <FinToolbar
                         categories={this.state.categories}

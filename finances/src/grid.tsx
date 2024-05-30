@@ -43,7 +43,20 @@ class FinGrid extends Component<Props, State> {
                 key: "description",
                 name: "Description",
                 renderCell: (props: { row: Row }) => {
-                    return props.row.description.slice(0, isIpad() ? 25 : 45);
+                    return (
+                        <div
+                            onClick={() => {
+                                this.props.onSelect(
+                                    "description",
+                                    props.row.description +
+                                        "|||" +
+                                        props.row.category
+                                );
+                            }}
+                        >
+                            {props.row.description.slice(0, isIpad() ? 25 : 45)}
+                        </div>
+                    );
                 },
             },
 
