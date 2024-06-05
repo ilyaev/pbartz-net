@@ -8,6 +8,13 @@ import FinToolbar from "./toolbar";
 import { State as ToolbarState } from "./toolbar";
 import CategoryModal from "./category";
 
+const IGNORE = [
+    "WU *6718275072 877-989-3268 CA", // balanced Western Union
+    "UCSCEPAY", // college
+    "DR ADJ REDIST", // amex adjustments
+    "HIMS & HERS",
+];
+
 export interface Row {
     date: string;
     description: string;
@@ -55,9 +62,7 @@ class App extends Component<Props, State> {
         const rows = data.result
             .filter((a: Row) =>
                 parseFloat(a.amount) > 0 &&
-                a.description.indexOf("UCSCEPAY") === -1 &&
-                a.description.indexOf("DR ADJ REDIST") === -1 &&
-                a.description.indexOf("HIMS & HERS") === -1
+                IGNORE.every((ignore) => a.description.indexOf(ignore) === -1)
                     ? true
                     : false
             )
