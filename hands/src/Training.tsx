@@ -2,7 +2,7 @@ import React from "react";
 import "react-data-grid/lib/styles.css";
 
 import DataGrid from "react-data-grid";
-import { CustomHand } from "./hands";
+import { CustomHand, HandState } from "./hands";
 import * as tf from "@tensorflow/tfjs";
 import * as tfvis from "@tensorflow/tfjs-vis";
 import {
@@ -12,10 +12,7 @@ import {
     Segment,
     SegmentGroup,
 } from "semantic-ui-react";
-
-export interface TrainingRecords {
-    [s: string]: number[][];
-}
+import { TrainingRecords } from "./models";
 
 export interface TrainConfig {
     epochs: number;
@@ -36,7 +33,7 @@ interface Props {
     onDeleteSample: (label: string) => void;
     onTraining: (start?: boolean) => void;
     onSampling: (start?: boolean) => void;
-    hands: CustomHand[];
+    hands: HandState[];
 }
 interface State {
     label: string;
@@ -161,7 +158,7 @@ export class Training extends React.Component<Props, State> {
             });
             if (frame < parseInt(this.state.frames)) {
                 if (this.props.hands[0]) {
-                    this.recordings.push(this.props.hands[0]);
+                    this.recordings.push(this.props.hands[0].hand);
                 }
                 this.sampleCycle();
             } else {

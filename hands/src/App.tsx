@@ -1,14 +1,15 @@
 import React from "react";
 import "./App.css";
 import { Camera } from "./Camera";
-import * as handPoseDetection from "@tensorflow-models/hand-pose-detection";
+// import * as handPoseDetection from "@tensorflow-models/hand-pose-detection";
 import * as tf from "@tensorflow/tfjs";
 // import "@tensorflow/tfjs-backend-webgl";
 import { Canvas } from "./Canvas";
 import { HUD } from "./HUD";
-import { Training, TrainingRecords } from "./Training";
-import { calculateAngleBetweenLines, clickElementByCoordinates } from "./utils";
-import { CustomHand } from "./hands";
+import { Training } from "./Training";
+import { clickElementByCoordinates } from "./utils";
+import { CustomHand, HandState } from "./hands";
+import { HandModels, TrainingRecords } from "./models";
 // import * as tfvis from "@tensorflow/tfjs-vis";
 
 export interface ClickState {
@@ -22,11 +23,13 @@ export interface ClickState {
     endSize: number;
     lifetime: number;
     active: boolean;
+    color: number[];
 }
 
 interface Props {}
+
 interface State {
-    hands: CustomHand[];
+    hands: HandState[];
     poses: string[];
     training?: boolean;
     records?: TrainingRecords;
@@ -35,7 +38,7 @@ interface State {
     clicks: ClickState[];
 }
 
-class App extends React.Component<Props, State> {
+class App2 extends React.Component<Props, State> {
     state = {
         hands: [],
         poses: [],
@@ -44,83 +47,47 @@ class App extends React.Component<Props, State> {
         trainingInProgress: false,
         clicks: [] as ClickState[],
     } as State;
-    model = handPoseDetection.SupportedModels.MediaPipeHands;
-    detector?: handPoseDetection.HandDetector;
-
-    poseModel?: tf.LayersModel;
 
     cameraWidth = 120;
     cameraHeight = 80;
-
-    poseModelName = "hands";
-
     canvasWidth = document.body.offsetWidth;
     canvasHeight = document.body.offsetHeight;
 
-    poses: string[] = [];
+    models: HandModels = new HandModels();
 
-    poseBuffer: { [s: string]: string[] } = {
-        Left: [],
-        Right: [],
+    hands: { [s: string]: HandState } = {
+        Left: new HandState(),
+        Right: new HandState(),
     };
-    poseBufferLength = 10;
 
     constructor(props: Props) {
         super(props);
         this.cameraWidth = this.canvasWidth * 0.1;
         this.cameraHeight = this.canvasHeight * 0.1;
-    }
 
-    async loadPoseModel() {
-        try {
-            this.poseModel = await tf.loadLayersModel(
-                `localstorage://${this.poseModelName}`
-            );
-        } catch (e) {
-            this.poseModel = undefined;
-        }
+        [this.hands.Left, this.hands.Right].forEach((hand) => {
+            hand.onPoseChange = this.onHandPoseChange;
+            hand.onPinch = this.onPinch;
+            hand.onDragStart = this.onDragStart;
+            hand.onDrag = this.onDrag;
+            hand.onDrop = this.onDrop;
+        });
     }
 
     async componentDidMount() {
-        await this.loadPoseModel();
         try {
-            const records = this.getRecords();
-            this.poses = Object.keys(records);
-            this.setState({ poses: this.poses, records });
+            await this.models.init();
+            this.setState({
+                poses: this.models.poses,
+                records: this.models.getRecords(),
+            });
         } catch (e) {
             this.setState({ poses: [], records: {} });
-            console.log(e);
         }
-        this.detector = await handPoseDetection.createDetector(this.model, {
-            runtime: "tfjs",
-        });
-        this.processing();
-    }
-
-    processing() {
-        if (this.state.clicks.length > 0) {
-            const clicks = this.state.clicks
-                .map((click) => {
-                    const r = Object.assign({}, click, {
-                        size:
-                            click.startSize +
-                            ((click.endSize - click.startSize) *
-                                (Date.now() - click.startTime)) /
-                                (200 + (Math.random() * 50 - 25)),
-                        active: click.size < click.endSize,
-                    } as ClickState);
-                    r.x = r.centerX - r.size / 2;
-                    r.y = r.centerY - r.size / 2;
-                    return r;
-                })
-                .filter((click) => click.active);
-            this.setState({ clicks });
-        }
-        window.requestAnimationFrame(this.processing.bind(this));
+        this.clicksProcessing();
     }
 
     render() {
-        // console.log("R: App");
         return (
             <>
                 {this.state.trainingInProgress && (
@@ -179,7 +146,7 @@ class App extends React.Component<Props, State> {
                         onClose={async (reload) => {
                             this.setState({ training: false });
                             if (reload) {
-                                await this.loadPoseModel();
+                                await this.models.loadPoseModel();
                             }
                         }}
                         onSampling={(start) => {
@@ -198,126 +165,25 @@ class App extends React.Component<Props, State> {
                         records={this.state.records || {}}
                     />
                 )}
-                {this.state.hands.length > 0 &&
-                    !this.state.training &&
-                    !this.state.trainingInProgress &&
-                    this.renderHandsDebug()}
             </>
         );
     }
 
-    renderHandsDebug() {
-        return (
-            <div
-                style={{
-                    position: "absolute",
-                    top: "0",
-                    left: "0",
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "start",
-                    alignItems: "end",
-                    backgroundColor: "rgba(0, 0, 0, 0.001)",
-                    color: "white",
-                    padding: "20px",
-                }}
-            >
-                {this.state.hands.map((hand, i) => {
-                    return (
-                        <div
-                            key={i}
-                            style={{
-                                width: "400px",
-                                marginBottom: "10px",
-                                pointerEvents: "none",
-                            }}
-                        >
-                            <div>
-                                <span>Hand: {hand.handedness}</span>
-                            </div>
-                            <div>
-                                <span>
-                                    Pose: {hand.pose} ({hand.score})
-                                </span>
-                            </div>
-                            <div>
-                                <span>
-                                    Center: {hand.center.x.toFixed(2)},{" "}
-                                    {hand.center.y.toFixed(2)}
-                                </span>
-                            </div>
-                            <div>
-                                <span>
-                                    Center 3D: {hand.center3d.x.toFixed(4)},{" "}
-                                    {hand.center3d.y.toFixed(4)},{" "}
-                                    {hand.center3d.z.toFixed(4)}
-                                </span>
-                            </div>
-                            <div>
-                                <span>
-                                    Thumb length:{" "}
-                                    {this.distanceToNode3d(hand, 5, 8).toFixed(
-                                        4
-                                    )}
-                                </span>
-                            </div>
-                            <div>
-                                <span>
-                                    Pinch:{" "}
-                                    {this.distanceToNode3d(hand, 4, 8).toFixed(
-                                        4
-                                    )}
-                                </span>
-                            </div>
-                            <div>
-                                <span>
-                                    Pinch 2D:{" "}
-                                    {this.distanceToNode(hand, 4, 8).toFixed(4)}
-                                </span>
-                            </div>
-                            <div>
-                                <span>
-                                    t2center3d:{" "}
-                                    {this.distanceToCenter3d(hand, 8).toFixed(
-                                        4
-                                    )}
-                                </span>
-                            </div>
-                            <div>
-                                <span>
-                                    Angle: {this.handTipDirectionAngle(hand)}{" "}
-                                </span>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        );
+    setRecords(records: TrainingRecords) {
+        this.models.setRecords(records);
+        this.setState({ poses: this.models.poses, records });
     }
 
-    getRecords = () => {
-        try {
-            const records = JSON.parse(localStorage.getItem(`records`) || "{}");
-            return records as TrainingRecords;
-        } catch (e) {
-            return {} as TrainingRecords;
-        }
-    };
-
-    setRecords(records: TrainingRecords) {
-        localStorage.setItem(`records`, JSON.stringify(records));
-        this.poses = Object.keys(records);
-        this.setState({ poses: this.poses, records });
+    serializeHand(hand: CustomHand) {
+        return this.hands.Left.serializeHand(hand);
     }
 
     onAddSample = (samples: CustomHand[], label: string) => {
         if (samples.length > 0) {
-            const records = this.getRecords();
+            const records = this.models.getRecords();
             records[label] = ([] as number[][])
                 .concat(records[label] || [])
-                .concat(samples.map(this.serializeHand));
+                .concat(samples.map((sample) => this.serializeHand(sample)));
             this.setRecords(records);
         }
         setTimeout(() => {
@@ -326,110 +192,109 @@ class App extends React.Component<Props, State> {
     };
 
     onDeleteSample = (label: string) => {
-        const records = this.getRecords();
+        const records = this.models.getRecords();
         delete records[label];
         this.setRecords(records);
     };
 
     scanVideo = (video: HTMLVideoElement) => {
-        this.detector
+        // detect hands
+        this.models.detector
             ?.estimateHands(video, { flipHorizontal: true })
             .then((hands) => {
+                // clear pose for invisible hands
+                const visibleHands = hands.map(
+                    (hand) => hand.handedness
+                ) as string[];
+                Object.keys(this.hands).forEach((hand) => {
+                    if (!visibleHands.includes(hand)) {
+                        this.hands[hand].setPose("");
+                    }
+                });
+
                 if (hands.length === 0 && this.state.hands.length === 0) {
                     return;
                 }
                 this.setState({
-                    hands: hands.map(this.scaleHand).map((hand) => {
-                        const prediction = this.poseModel!.predict(
-                            tf.tensor2d([this.serializeHand(hand)])
-                        ) as tf.Tensor;
-                        const predictionData = prediction.dataSync();
-                        hand.pose = this.getPoseLabel(
-                            predictionData as Float32Array,
-                            this.poses
-                        );
-                        this.poseBuffer[hand.handedness] = this.poseBuffer[
-                            hand.handedness
-                        ]
-                            .concat([hand.pose])
-                            .slice(-this.poseBufferLength);
-                        const poses = this.poseBuffer[hand.handedness].reduce(
-                            (res, v) => {
-                                res[v] = (res[v] || 0) + 1;
-                                return res;
-                            },
-                            {} as { [s: string]: number }
-                        );
-                        const maxNumber = Math.max(...Object.values(poses));
-                        const maxPose = Object.keys(poses).find((k) =>
-                            poses[k] === maxNumber ? true : false
-                        );
-                        hand.pose = maxPose || hand.pose;
-                        setTimeout(() => {
-                            this.onHandPose(hand);
-                        }, 0);
-                        return hand;
-                    }),
+                    hands: hands
+                        .map((hand) => {
+                            const handState = this.hands[hand.handedness];
+                            handState.updateHand(hand as CustomHand);
+                            return handState;
+                        })
+                        .map((hand) => {
+                            // detect hand pose
+                            const prediction = this.models.poseModel!.predict(
+                                tf.tensor2d([hand.serializeHand()])
+                            ) as tf.Tensor;
+
+                            hand.setPose(
+                                this.models.getPoseLabel(
+                                    prediction.dataSync() as Float32Array
+                                )
+                            );
+                            return hand;
+                        }),
                 });
             });
     };
 
-    onHandPose = (hand: CustomHand) => {
-        if (hand.pose === "pinch") {
-            const tip = hand.keypoints3D![8];
-            const thumb = hand.keypoints3D![4];
-            // const knuckle = hand.keypoints3D![7];
-            // const knuckle2 = hand.keypoints3D![3];
+    onDragStart = (_hand: HandState, x: number, y: number) => {
+        console.log("On drag start", [x, y]);
+        const newClick = {
+            centerX: x + Math.random() * 10 - 5,
+            centerY: y + Math.random() * 10 - 5,
+            x,
+            y,
+            startTime: Date.now(),
+            size: 20,
+            startSize: 20,
+            endSize: 300 + (Math.random() * 100 - 50),
+            active: true,
+            lifetime: 1000 + (Math.random() * 500 - 250),
+            color: [0, 0, 255],
+        } as ClickState;
 
-            // const fingerLength = this.distance3d(
-            //     knuckle.x,
-            //     knuckle.y,
-            //     knuckle.z!,
-            //     knuckle2.x,
-            //     knuckle2.y,
-            //     knuckle2.z!
-            // );
-            const pinchLength = this.distance3d(
-                tip.x,
-                tip.y,
-                tip.z!,
-                thumb.x,
-                thumb.y,
-                thumb.z!
-            );
-
-            // const fingerLength2d = this.distance(
-            //     hand.keypoints[7].x,
-            //     hand.keypoints[7].y,
-            //     hand.keypoints[8].x,
-            //     hand.keypoints[8].y
-            // );
-            // const pinchLength2d = this.distance(
-            //     hand.keypoints[8].x,
-            //     hand.keypoints[8].y,
-            //     hand.keypoints[4].x,
-            //     hand.keypoints[4].y
-            // );
-
-            // const pinch = (pinchLength / fingerLength) * 100;
-            // const pinch2d = (pinchLength2d / fingerLength2d) * 100;
-
-            // const tipAngle = this.handTipDirectionAngle(hand);
-
-            // if (pinch < 80) {
-            // if (pinch2d < 80) {
-            if (pinchLength < 0.02) {
-                const tip2d = hand.keypoints[8];
-                const thumb2d = hand.keypoints[4];
-                this.onPinch(
-                    tip2d.x + (thumb2d.x - tip2d.x) / 2,
-                    tip2d.y + (thumb2d.y - tip2d.y) / 2
-                );
-            }
-        }
+        setTimeout(() => {
+            this.setState({
+                clicks: ([] as ClickState[])
+                    .concat(this.state.clicks)
+                    .concat([newClick]),
+            });
+        }, 0);
     };
 
-    onPinch = (x: number, y: number) => {
+    onDrag = (_hand: HandState, x: number, y: number) => {
+        console.log("On drag", [x, y]);
+        const newClick = {
+            centerX: x + Math.random() * 10 - 5,
+            centerY: y + Math.random() * 10 - 5,
+            x,
+            y,
+            startTime: Date.now(),
+            size: 20,
+            startSize: 20,
+            endSize: 150 + (Math.random() * 100 - 50),
+            active: true,
+            lifetime: 3000 + (Math.random() * 500 - 250),
+            color: [0, 255, 0],
+        } as ClickState;
+
+        setTimeout(() => {
+            this.setState({
+                clicks: ([] as ClickState[])
+                    .concat(this.state.clicks)
+                    .concat([newClick]),
+            });
+        }, 0);
+    };
+
+    onDrop = (_hand: HandState, x: number, y: number) => {
+        console.log("On drag end", [x, y]);
+    };
+
+    onPinch = (hand: HandState, x: number, y: number) => {
+        console.log("On pinch", hand);
         clickElementByCoordinates(x, y);
 
         const newClick = {
@@ -443,6 +308,7 @@ class App extends React.Component<Props, State> {
             endSize: 300 + (Math.random() * 100 - 50),
             active: true,
             lifetime: 1000 + (Math.random() * 500 - 250),
+            color: [255, 0, 0],
         } as ClickState;
 
         setTimeout(() => {
@@ -454,159 +320,32 @@ class App extends React.Component<Props, State> {
         }, 0);
     };
 
-    handTipDirectionAngle = (hand: CustomHand) => {
-        const angle = calculateAngleBetweenLines(
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            hand.keypoints3D![5].x,
-            hand.keypoints3D![5].y,
-            hand.keypoints3D![5].z!,
-            hand.keypoints3D![8].x,
-            hand.keypoints3D![8].y,
-            hand.keypoints3D![8].z!
-        );
-        return angle;
+    onHandPoseChange = (pose: string) => {
+        console.log("Hand pose:", pose);
     };
 
-    getPoseLabel = (predictionData: Float32Array, poses: string[]) => {
-        const mv = Math.max(...predictionData);
-        if (mv > 0.6) {
-            return poses[predictionData.findIndex((v) => v === mv)];
+    clicksProcessing() {
+        if (this.state.clicks.length > 0) {
+            console.log(this.state.clicks.length);
+            const clicks = this.state.clicks
+                .map((click) => {
+                    const r = Object.assign({}, click, {
+                        size:
+                            click.startSize +
+                            ((click.endSize - click.startSize) *
+                                (Date.now() - click.startTime)) /
+                                (200 + (Math.random() * 50 - 25)),
+                        active: click.size < click.endSize,
+                    } as ClickState);
+                    r.x = r.centerX - r.size / 2;
+                    r.y = r.centerY - r.size / 2;
+                    return r;
+                })
+                .filter((click) => click.active);
+            this.setState({ clicks });
         }
-        {
-            return "Unknown";
-        }
-    };
-
-    scaleHand = (hand: handPoseDetection.Hand): CustomHand => {
-        let allX = 0;
-        let allY = 0;
-        const res = {
-            ...hand,
-            keypoints: hand.keypoints.map((keypoint) => {
-                allX += keypoint.x;
-                allY += keypoint.y;
-                return {
-                    ...keypoint,
-                    x: keypoint.x / 0.1,
-                    y: keypoint.y / 0.1,
-                };
-            }),
-        } as CustomHand;
-        res.center = {
-            x: allX / hand.keypoints.length / 0.1,
-            y: allY / hand.keypoints.length / 0.1,
-        };
-        let all3dX = 0.0;
-        let all3dY = 0.0;
-        let all3dZ = 0.0;
-
-        hand.keypoints3D?.forEach((keypoint) => {
-            all3dX += keypoint.x;
-            all3dY += keypoint.y;
-            all3dZ += keypoint.z!;
-        });
-
-        res.center3d = {
-            x: all3dX / hand.keypoints3D!.length,
-            y: all3dY / hand.keypoints3D!.length,
-            z: all3dZ / hand.keypoints3D!.length,
-        };
-        return res;
-    };
-
-    distance = (x1: number, y1: number, x2: number, y2: number) => {
-        const xDiff = x2 - x1;
-        const yDiff = y2 - y1;
-        return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
-    };
-
-    distance3d = (
-        x1: number,
-        y1: number,
-        z1: number,
-        x2: number,
-        y2: number,
-        z2: number
-    ) => {
-        const xDiff = x2 - x1;
-        const yDiff = y2 - y1;
-        const zDiff = z2 - z1;
-        return Math.sqrt(xDiff * xDiff + yDiff * yDiff + zDiff * zDiff);
-    };
-
-    distanceToNode3d = (hand: CustomHand, nodeFrom: number, nodeTo: number) => {
-        hand.keypoints3D![4].z = hand.keypoints3D![8].z;
-
-        return this.distance3d(
-            hand.keypoints3D![nodeFrom].x,
-            hand.keypoints3D![nodeFrom].y,
-            hand.keypoints3D![nodeFrom].z!,
-            hand.keypoints3D![nodeTo].x,
-            hand.keypoints3D![nodeTo].y,
-            hand.keypoints3D![nodeTo].z!
-        );
-    };
-
-    distanceToCenter3d = (hand: CustomHand, nodeTo: number) => {
-        return this.distance3d(
-            hand.keypoints3D![nodeTo].x,
-            hand.keypoints3D![nodeTo].y,
-            hand.keypoints3D![nodeTo].z!,
-            0,
-            0,
-            0
-        );
-    };
-
-    distanceToNode = (hand: CustomHand, nodeFrom: number, nodeTo: number) => {
-        return this.distance(
-            hand.keypoints[nodeFrom].x,
-            hand.keypoints[nodeFrom].y,
-            hand.keypoints[nodeTo].x,
-            hand.keypoints[nodeTo].y
-        );
-    };
-
-    serializeHand = (hand: CustomHand) => {
-        return this.serializeHand3D(hand);
-        // const center = hand.center;
-        // const distances = hand.keypoints.map((kp) => {
-        //     return this.distance(kp.x, kp.y, center.x, center.y);
-        // });
-        // const maxDistance = Math.max(...distances);
-        // const minDistance = Math.min(...distances);
-        // const normalizedDistances = distances.map((d) => {
-        //     return (d - minDistance) / (maxDistance - minDistance);
-        // });
-        // this.serializeHand3D(hand);
-        // return normalizedDistances;
-    };
-
-    vectorSubtract = (a: number[], b: number[]) => {
-        return a.map((v, i) => v - b[i]);
-    };
-
-    serializeHand3D = (hand: CustomHand) => {
-        const center = hand.center3d;
-        const vectors = hand.keypoints3D!.map((kp) => {
-            return this.vectorSubtract(
-                [kp.x, kp.y, kp.z!],
-                [center.x, center.y, center.z]
-            );
-        });
-        const vector = vectors.reduce((res, v) => {
-            return res.concat(v);
-        }, [] as number[]);
-        const max = Math.max(...vector);
-        const min = Math.min(...vector);
-        const normalized = vector.map((v) => (v - min) / (max - min));
-        return normalized;
-    };
+        window.requestAnimationFrame(this.clicksProcessing.bind(this));
+    }
 }
 
-export default App;
+export default App2;

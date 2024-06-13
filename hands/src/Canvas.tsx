@@ -1,8 +1,8 @@
 import React from "react";
-import { CustomHand } from "./hands";
+import { HandState } from "./hands";
 
 interface Props {
-    hands: CustomHand[];
+    hands: HandState[];
     width?: number;
     height?: number;
 }
@@ -30,18 +30,22 @@ export class Canvas extends React.Component<Props, State> {
         ctx.fillStyle = "rgba(0, 0, 0, 0.01)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         this.props.hands.forEach((hand) => {
-            hand.keypoints.forEach((keypoint) => {
+            hand.hand.keypoints.forEach((keypoint) => {
                 ctx.fillStyle = "rgba(0, 255, 0, 0.8)";
                 ctx.fillRect(keypoint.x, keypoint.y, 10, 10);
             });
 
             ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
-            ctx.fillRect(hand.center.x, hand.center.y, 20, 20);
+            ctx.fillRect(hand.hand.center.x, hand.hand.center.y, 20, 20);
 
             ctx.font = "30px Arial";
             ctx.fillStyle = "white";
 
-            ctx.fillText(hand.pose, hand.center.x + 22, hand.center.y + 20);
+            ctx.fillText(
+                hand.pose,
+                hand.hand.center.x + 22,
+                hand.hand.center.y + 20
+            );
         });
     };
 

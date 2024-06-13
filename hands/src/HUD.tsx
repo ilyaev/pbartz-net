@@ -102,7 +102,9 @@ export class HUD extends React.Component<Props, State> {
                             style={{
                                 position: "absolute",
                                 borderRadius: "50%",
-                                backgroundColor: `rgba(255, 0, 0, ${Math.max(
+                                backgroundColor: `rgba(${click.color.join(
+                                    ", "
+                                )}, ${Math.max(
                                     0.01,
                                     1 -
                                         Math.min(

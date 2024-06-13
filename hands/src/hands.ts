@@ -6,6 +6,12 @@ import {
     vectorSubtract,
 } from "./utils";
 
+export enum HAND_POSE {
+    Pinch = "pinch",
+    Hold = "hold",
+    Five = "five",
+}
+
 export interface CustomHand extends handPoseDetection.Hand {
     center: {
         x: number;
@@ -21,11 +27,108 @@ export interface CustomHand extends handPoseDetection.Hand {
 
 export class HandState {
     hand: CustomHand = {} as CustomHand;
+    pose: string = "";
+    prevPose: string = "";
+    handedness: string = "";
+    poseBuffer: string[] = [];
+    poseBufferLength = 10;
+    onPoseChange?: (pose: string, hand?: HandState) => void;
+    onPinch?: (hand: HandState, x: number, y: number) => void;
+    onDragStart?: (hand: HandState, x: number, y: number) => void;
+    onDrag?: (hand: HandState, x: number, y: number) => void;
+    onDrop?: (hand: HandState, x: number, y: number) => void;
+    isPinching: boolean = false;
+    isHolding: boolean = false;
 
     constructor() {}
 
     updateHand(hand: CustomHand) {
         this.hand = this.scaleHand(hand);
+        this.handedness = hand.handedness;
+    }
+
+    setPose(pose: string) {
+        if (!pose) {
+            this.poseBuffer = [];
+            this.pose = "";
+            this.hand.pose = "";
+            this.prevPose = "";
+            return;
+        }
+        this.poseBuffer = this.poseBuffer
+            .concat([pose])
+            .slice(-this.poseBufferLength);
+        const poses = this.poseBuffer.reduce((res, v) => {
+            res[v] = (res[v] || 0) + 1;
+            return res;
+        }, {} as { [s: string]: number });
+
+        const maxNumber = Math.max(...Object.values(poses));
+        const maxPose = Object.keys(poses).find((k) =>
+            poses[k] === maxNumber ? true : false
+        );
+
+        const newPose = maxPose || pose;
+        this.pose = newPose;
+        this.hand.pose = newPose;
+
+        if (newPose !== this.prevPose) {
+            if (this.onPoseChange) {
+                this.onPoseChange(newPose, this);
+            }
+        }
+
+        switch (newPose) {
+            case HAND_POSE.Pinch:
+                if (this.distanceToNode3d(8, 4) < 0.02) {
+                    if (!this.isPinching) {
+                        this.isPinching = true;
+                        if (this.onPinch) {
+                            const tip2d = this.hand.keypoints[8];
+                            const thumb2d = this.hand.keypoints[4];
+                            const x = tip2d.x + (thumb2d.x - tip2d.x) / 2;
+                            const y = tip2d.y + (thumb2d.y - tip2d.y) / 2;
+                            this.onPinch(this, x, y);
+                        }
+                    }
+                } else {
+                    if (this.isPinching) {
+                        this.isPinching = false;
+                    }
+                }
+                break;
+            case HAND_POSE.Hold:
+                if (!this.isHolding && this.prevPose === HAND_POSE.Five) {
+                    this.isHolding = true;
+                    if (this.onDragStart) {
+                        this.onDragStart(
+                            this,
+                            this.hand.center.x,
+                            this.hand.center.y
+                        );
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+
+        if (this.isPinching && newPose !== HAND_POSE.Pinch) {
+            this.isPinching = false;
+        }
+
+        if (this.isHolding && newPose !== HAND_POSE.Hold) {
+            this.isHolding = false;
+            if (this.onDrop) {
+                this.onDrop(this, this.hand.center.x, this.hand.center.y);
+            }
+        }
+
+        if (this.isHolding && this.onDrag) {
+            this.onDrag(this, this.hand.center.x, this.hand.center.y);
+        }
+
+        this.prevPose = newPose;
     }
 
     scaleHand = (hand: CustomHand): CustomHand => {
@@ -63,6 +166,10 @@ export class HandState {
             z: all3dZ / hand.keypoints3D!.length,
         };
         return res;
+    };
+
+    serializeHand = (hand?: CustomHand) => {
+        return this.serializeHand3D(hand || this.hand);
     };
 
     serializeHand3D = (hand: CustomHand) => {
