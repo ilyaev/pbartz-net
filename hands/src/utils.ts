@@ -71,7 +71,11 @@ export const calculateAngleBetweenLines = (
     return angleInDegrees;
 };
 
-export function clickElementByCoordinates(x: number, y: number) {
+export function clickElementByCoordinates(
+    x: number,
+    y: number,
+    detail: number = 0
+) {
     // Get the element at the specified coordinates.
     let element = document.elementFromPoint(x, y);
 
@@ -86,6 +90,7 @@ export function clickElementByCoordinates(x: number, y: number) {
         clientY: y,
         bubbles: true,
         cancelable: true,
+        detail,
     });
 
     // Dispatch the click event on the element.

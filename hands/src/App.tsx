@@ -1,30 +1,19 @@
 import React from "react";
 import "./App.css";
 import { Camera } from "./Camera";
-// import * as handPoseDetection from "@tensorflow-models/hand-pose-detection";
 import * as tf from "@tensorflow/tfjs";
-// import "@tensorflow/tfjs-backend-webgl";
 import { Canvas } from "./Canvas";
 import { HUD } from "./HUD";
 import { Training } from "./Training";
 import { clickElementByCoordinates } from "./utils";
 import { CustomHand, HandState } from "./hands";
 import { HandModels, TrainingRecords } from "./models";
-// import * as tfvis from "@tensorflow/tfjs-vis";
-
-export interface ClickState {
-    x: number;
-    y: number;
-    centerX: number;
-    centerY: number;
-    startTime: number;
-    size: number;
-    startSize: number;
-    endSize: number;
-    lifetime: number;
-    active: boolean;
-    color: number[];
-}
+import {
+    CanvasDrawingState,
+    DRAW_OBJECT_TYPE,
+    DrawCircleState,
+    DrawObjectState,
+} from "./drawings";
 
 interface Props {}
 
@@ -35,7 +24,8 @@ interface State {
     records?: TrainingRecords;
     trainingInProgress?: boolean;
     samplingInProgress?: boolean;
-    clicks: ClickState[];
+    canvasObjects: DrawObjectState[];
+    loaded: boolean;
 }
 
 class App2 extends React.Component<Props, State> {
@@ -45,7 +35,8 @@ class App2 extends React.Component<Props, State> {
         training: false,
         records: {} as TrainingRecords,
         trainingInProgress: false,
-        clicks: [] as ClickState[],
+        canvasObjects: [] as DrawObjectState[],
+        loaded: false,
     } as State;
 
     cameraWidth = 120;
@@ -60,6 +51,8 @@ class App2 extends React.Component<Props, State> {
         Right: new HandState(),
     };
 
+    drawings: CanvasDrawingState = new CanvasDrawingState();
+
     constructor(props: Props) {
         super(props);
         this.cameraWidth = this.canvasWidth * 0.1;
@@ -72,22 +65,28 @@ class App2 extends React.Component<Props, State> {
             hand.onDrag = this.onDrag;
             hand.onDrop = this.onDrop;
         });
+
+        this.drawings.onUpdate = (objects) => {
+            this.setState({ canvasObjects: objects });
+        };
     }
 
     async componentDidMount() {
         try {
             await this.models.init();
+            await this.drawings.init();
             this.setState({
                 poses: this.models.poses,
+                loaded: true,
                 records: this.models.getRecords(),
             });
         } catch (e) {
-            this.setState({ poses: [], records: {} });
+            this.setState({ poses: [], records: {}, loaded: true });
         }
-        this.clicksProcessing();
     }
 
     render() {
+        // console.log("R: App");
         return (
             <>
                 {this.state.trainingInProgress && (
@@ -95,31 +94,20 @@ class App2 extends React.Component<Props, State> {
                         Training in progress...
                     </div>
                 )}
-                {this.state.training ? (
-                    <div
-                        style={{
-                            position: "absolute",
-                            left: "0px",
-                            top: "0px",
-                            width: "100%",
-                            height: "100%",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            backgroundColor: "rgb(0, 0, 0)",
-                            color: "gray",
-                        }}
-                    ></div>
-                ) : (
-                    <HUD
-                        handsCount={this.state.hands.length}
-                        poses={this.state.poses}
-                        key={"HUD"}
-                        onTrain={() => this.setState({ training: true })}
-                        clicks={this.state.clicks}
-                    />
-                )}
+                <HUD
+                    handsCount={this.state.hands.length}
+                    hands={this.state.hands}
+                    poses={this.state.poses}
+                    training={this.state.training}
+                    key={"HUD"}
+                    loaded={this.state.loaded}
+                    onTrain={() => this.setState({ training: true })}
+                    clicks={
+                        this.state.canvasObjects.filter(
+                            (o) => o.type === DRAW_OBJECT_TYPE.Circle
+                        ) as DrawCircleState[]
+                    }
+                />
                 {this.state.trainingInProgress
                     ? undefined
                     : this.state.hands.length === 0 || (
@@ -187,7 +175,10 @@ class App2 extends React.Component<Props, State> {
             this.setRecords(records);
         }
         setTimeout(() => {
-            this.setState({ samplingInProgress: false });
+            this.setState({
+                samplingInProgress: false,
+                poses: this.models.poses,
+            });
         }, 0);
     };
 
@@ -215,6 +206,7 @@ class App2 extends React.Component<Props, State> {
                 if (hands.length === 0 && this.state.hands.length === 0) {
                     return;
                 }
+
                 this.setState({
                     hands: hands
                         .map((hand) => {
@@ -240,112 +232,30 @@ class App2 extends React.Component<Props, State> {
     };
 
     onDragStart = (_hand: HandState, x: number, y: number) => {
-        console.log("On drag start", [x, y]);
-        const newClick = {
-            centerX: x + Math.random() * 10 - 5,
-            centerY: y + Math.random() * 10 - 5,
-            x,
-            y,
-            startTime: Date.now(),
-            size: 20,
-            startSize: 20,
-            endSize: 300 + (Math.random() * 100 - 50),
-            active: true,
-            lifetime: 1000 + (Math.random() * 500 - 250),
-            color: [0, 0, 255],
-        } as ClickState;
-
-        setTimeout(() => {
-            this.setState({
-                clicks: ([] as ClickState[])
-                    .concat(this.state.clicks)
-                    .concat([newClick]),
-            });
-        }, 0);
+        this.drawings.addBlip(x, y, { color: [0, 0, 255], lifetime: 200 });
     };
 
     onDrag = (_hand: HandState, x: number, y: number) => {
-        console.log("On drag", [x, y]);
-        const newClick = {
-            centerX: x + Math.random() * 10 - 5,
-            centerY: y + Math.random() * 10 - 5,
-            x,
-            y,
-            startTime: Date.now(),
-            size: 20,
-            startSize: 20,
-            endSize: 150 + (Math.random() * 100 - 50),
-            active: true,
-            lifetime: 3000 + (Math.random() * 500 - 250),
-            color: [0, 255, 0],
-        } as ClickState;
-
-        setTimeout(() => {
-            this.setState({
-                clicks: ([] as ClickState[])
-                    .concat(this.state.clicks)
-                    .concat([newClick]),
-            });
-        }, 0);
+        this.drawings.addBlip(x, y, {
+            color: [0, 255 - Math.random() * 60, 0],
+            lifetime: 1000,
+        });
     };
 
     onDrop = (_hand: HandState, x: number, y: number) => {
-        console.log("On drag end", [x, y]);
+        this.drawings.addBlip(x, y, { color: [0, 0, 255], lifetime: 200 });
     };
 
     onPinch = (hand: HandState, x: number, y: number) => {
-        console.log("On pinch", hand);
-        clickElementByCoordinates(x, y);
-
-        const newClick = {
-            centerX: x + Math.random() * 10 - 5,
-            centerY: y + Math.random() * 10 - 5,
-            x,
-            y,
-            startTime: Date.now(),
-            size: 20,
-            startSize: 20,
-            endSize: 300 + (Math.random() * 100 - 50),
-            active: true,
-            lifetime: 1000 + (Math.random() * 500 - 250),
-            color: [255, 0, 0],
-        } as ClickState;
-
-        setTimeout(() => {
-            this.setState({
-                clicks: ([] as ClickState[])
-                    .concat(this.state.clicks)
-                    .concat([newClick]),
-            });
-        }, 0);
+        clickElementByCoordinates(x, y, hand.handedness === "Left" ? 0 : 1);
+        this.drawings.addBlip(x, y, {
+            lifetime: 200,
+        });
     };
 
     onHandPoseChange = (pose: string) => {
         console.log("Hand pose:", pose);
     };
-
-    clicksProcessing() {
-        if (this.state.clicks.length > 0) {
-            console.log(this.state.clicks.length);
-            const clicks = this.state.clicks
-                .map((click) => {
-                    const r = Object.assign({}, click, {
-                        size:
-                            click.startSize +
-                            ((click.endSize - click.startSize) *
-                                (Date.now() - click.startTime)) /
-                                (200 + (Math.random() * 50 - 25)),
-                        active: click.size < click.endSize,
-                    } as ClickState);
-                    r.x = r.centerX - r.size / 2;
-                    r.y = r.centerY - r.size / 2;
-                    return r;
-                })
-                .filter((click) => click.active);
-            this.setState({ clicks });
-        }
-        window.requestAnimationFrame(this.clicksProcessing.bind(this));
-    }
 }
 
 export default App2;

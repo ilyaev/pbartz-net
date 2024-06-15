@@ -1,4 +1,5 @@
 import * as handPoseDetection from "@tensorflow-models/hand-pose-detection";
+
 import {
     calculateAngleBetweenLines,
     distance,
@@ -84,11 +85,8 @@ export class HandState {
                     if (!this.isPinching) {
                         this.isPinching = true;
                         if (this.onPinch) {
-                            const tip2d = this.hand.keypoints[8];
-                            const thumb2d = this.hand.keypoints[4];
-                            const x = tip2d.x + (thumb2d.x - tip2d.x) / 2;
-                            const y = tip2d.y + (thumb2d.y - tip2d.y) / 2;
-                            this.onPinch(this, x, y);
+                            const pinchPoint = this.pinchPoint();
+                            this.onPinch(this, pinchPoint.x, pinchPoint.y);
                         }
                     }
                 } else {
@@ -130,6 +128,14 @@ export class HandState {
 
         this.prevPose = newPose;
     }
+
+    pinchPoint = () => {
+        const tip2d = this.hand.keypoints[8];
+        const thumb2d = this.hand.keypoints[4];
+        const x = tip2d.x + (thumb2d.x - tip2d.x) / 2;
+        const y = tip2d.y + (thumb2d.y - tip2d.y) / 2;
+        return { x, y };
+    };
 
     scaleHand = (hand: CustomHand): CustomHand => {
         let allX = 0;
