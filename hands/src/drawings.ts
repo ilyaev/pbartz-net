@@ -91,12 +91,14 @@ export class CanvasDrawingState {
 
     process() {
         if (this.objects.length > 0) {
+            let flag = false;
             this.objects = ([] as DrawObjectState[]).concat(
                 this.objects
                     .map((object) => {
                         if (object.lifetime === -1 || !object.endSize) {
                             return object;
                         }
+                        flag = true;
                         const r = Object.assign({}, object, {
                             size:
                                 object.startSize +
@@ -111,7 +113,7 @@ export class CanvasDrawingState {
                     })
                     .filter((object) => object.active)
             );
-            if (this.onUpdate) {
+            if (flag && this.onUpdate) {
                 this.onUpdate(this.objects);
             }
         }

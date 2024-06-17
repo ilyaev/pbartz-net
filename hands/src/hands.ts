@@ -34,18 +34,28 @@ export class HandState {
     poseBuffer: string[] = [];
     poseBufferLength = 10;
     onPoseChange?: (pose: string, hand?: HandState) => void;
-    onPinch?: (hand: HandState, x: number, y: number) => void;
+    onPinch?: (
+        hand: HandState,
+        x: number,
+        y: number,
+        isPinched?: boolean
+    ) => void;
     onDragStart?: (hand: HandState, x: number, y: number) => void;
     onDrag?: (hand: HandState, x: number, y: number) => void;
     onDrop?: (hand: HandState, x: number, y: number) => void;
     isPinching: boolean = false;
     isHolding: boolean = false;
 
+    pinchTrail: { x: number; y: number }[] = [];
+
     constructor() {}
 
     updateHand(hand: CustomHand) {
         this.hand = this.scaleHand(hand);
         this.handedness = hand.handedness;
+        this.pinchTrail = this.pinchTrail
+            .concat([this.pinchPoint()])
+            .splice(-10);
     }
 
     setPose(pose: string) {
@@ -78,21 +88,29 @@ export class HandState {
                 this.onPoseChange(newPose, this);
             }
         }
-
+        let flag = false;
         switch (newPose) {
             case HAND_POSE.Pinch:
                 if (this.distanceToNode3d(8, 4) < 0.02) {
                     if (!this.isPinching) {
                         this.isPinching = true;
-                        if (this.onPinch) {
-                            const pinchPoint = this.pinchPoint();
-                            this.onPinch(this, pinchPoint.x, pinchPoint.y);
-                        }
+                        this.pinchTrail = [];
+                        flag = true;
                     }
                 } else {
                     if (this.isPinching) {
                         this.isPinching = false;
+                        flag = true;
                     }
+                }
+                if (flag && this.onPinch) {
+                    const pinchPoint = this.pinchPoint();
+                    this.onPinch(
+                        this,
+                        pinchPoint.x,
+                        pinchPoint.y,
+                        this.isPinching
+                    );
                 }
                 break;
             case HAND_POSE.Hold:
@@ -113,6 +131,10 @@ export class HandState {
 
         if (this.isPinching && newPose !== HAND_POSE.Pinch) {
             this.isPinching = false;
+            if (this.onPinch) {
+                const pinchPoint = this.pinchPoint();
+                this.onPinch(this, pinchPoint.x, pinchPoint.y, false);
+            }
         }
 
         if (this.isHolding && newPose !== HAND_POSE.Hold) {

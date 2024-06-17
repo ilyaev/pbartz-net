@@ -20,7 +20,8 @@
     "react-data-grid": "^7.0.0-beta.44",
     "react-dom": "^18.2.0",
     "semantic-ui-css": "^2.5.0",
-    "semantic-ui-react": "^2.1.5"
+    "semantic-ui-react": "^2.1.5",
+    "vecti": "^3.0.9"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

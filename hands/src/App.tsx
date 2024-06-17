@@ -14,6 +14,7 @@ import {
     DrawCircleState,
     DrawObjectState,
 } from "./drawings";
+import { DraggableCardState, DraggableCards } from "./cards";
 
 interface Props {}
 
@@ -25,6 +26,7 @@ interface State {
     trainingInProgress?: boolean;
     samplingInProgress?: boolean;
     canvasObjects: DrawObjectState[];
+    cards: DraggableCardState[];
     loaded: boolean;
 }
 
@@ -37,6 +39,7 @@ class App2 extends React.Component<Props, State> {
         trainingInProgress: false,
         canvasObjects: [] as DrawObjectState[],
         loaded: false,
+        cards: [],
     } as State;
 
     cameraWidth = 120;
@@ -45,6 +48,7 @@ class App2 extends React.Component<Props, State> {
     canvasHeight = document.body.offsetHeight;
 
     models: HandModels = new HandModels();
+    cards: DraggableCards = new DraggableCards();
 
     hands: { [s: string]: HandState } = {
         Left: new HandState(),
@@ -66,9 +70,15 @@ class App2 extends React.Component<Props, State> {
             hand.onDrop = this.onDrop;
         });
 
+        this.cards.hands = this.hands;
+
         this.drawings.onUpdate = (objects) => {
             this.setState({ canvasObjects: objects });
         };
+        this.cards.onUpdate = (cards) => {
+            this.setState({ cards });
+        };
+        this.cards.onCollide = this.onCardsCollide;
     }
 
     async componentDidMount() {
@@ -98,10 +108,12 @@ class App2 extends React.Component<Props, State> {
                     handsCount={this.state.hands.length}
                     hands={this.state.hands}
                     poses={this.state.poses}
+                    cards={this.state.cards}
                     training={this.state.training}
                     key={"HUD"}
                     loaded={this.state.loaded}
                     onTrain={() => this.setState({ training: true })}
+                    onCardClick={this.onCardClick.bind(this)}
                     clicks={
                         this.state.canvasObjects.filter(
                             (o) => o.type === DRAW_OBJECT_TYPE.Circle
@@ -246,15 +258,80 @@ class App2 extends React.Component<Props, State> {
         this.drawings.addBlip(x, y, { color: [0, 0, 255], lifetime: 200 });
     };
 
-    onPinch = (hand: HandState, x: number, y: number) => {
+    onPinch = (
+        hand: HandState,
+        x: number,
+        y: number,
+        isPinched: boolean = true
+    ) => {
         clickElementByCoordinates(x, y, hand.handedness === "Left" ? 0 : 1);
         this.drawings.addBlip(x, y, {
             lifetime: 200,
         });
+        if (!isPinched) {
+            console.log(hand.pinchTrail);
+            this.cards.releaseHand(hand.handedness, hand.pinchTrail);
+        }
     };
 
     onHandPoseChange = (pose: string) => {
         console.log("Hand pose:", pose);
+    };
+
+    onCardClick = (id: number, event: React.MouseEvent) => {
+        event.stopPropagation();
+        const handness = event.detail === 0 ? "Left" : "Right";
+        this.cards.updateCard(id, {
+            handness,
+            dragging: true,
+        });
+        console.log("Card clicked:", id, event);
+    };
+
+    onCardsCollide = (
+        collisions: { [s: number]: number },
+        cards: DraggableCardState[]
+    ) => {
+        let updatedCards = cards;
+        Object.keys(collisions).forEach((id) => {
+            const srcId = parseInt(id);
+            const targetId = collisions[srcId];
+            const srcCard = cards.find((c) => c.id === srcId);
+            const targetCard = cards.find((c) => c.id === targetId);
+            let flag = false;
+            updatedCards = cards.map((card) => {
+                if (
+                    (card.id === srcId || card.id === targetId) &&
+                    srcId % 2 === targetId % 2
+                ) {
+                    flag = true;
+                    return {
+                        ...card,
+                        dragging: false,
+                        active: false,
+                    } as DraggableCardState;
+                } else {
+                    return card;
+                }
+            });
+            if (flag) {
+                const nextId = this.cards.nextId();
+                updatedCards = updatedCards.concat({
+                    id: nextId,
+                    x: targetCard!.x + (srcCard!.x - targetCard!.x) / 2,
+                    y: targetCard!.y + (srcCard!.y - targetCard!.y) / 2,
+                    size: 100,
+                    velocity: 0,
+                    direction: [0, 0],
+                    acceleration: 0,
+                    dragging: false,
+                    active: true,
+                    handness: "",
+                    label: `Card ${nextId}`,
+                } as DraggableCardState);
+            }
+        });
+        return updatedCards.filter((card) => card.active);
     };
 }
 

@@ -2,17 +2,7 @@ import React from "react";
 import { Button } from "semantic-ui-react";
 import { DrawCircleState } from "./drawings";
 import { HandState } from "./hands";
-
-interface DraggableCardState {
-    dragging: boolean;
-    x: number;
-    y: number;
-    currentX: number;
-    currentY: number;
-    label: string;
-    handness: string;
-    size: number;
-}
+import { DraggableCardState } from "./cards";
 
 interface Props {
     handsCount: number;
@@ -22,87 +12,20 @@ interface Props {
     loaded: boolean;
     training?: boolean;
     hands: HandState[];
+    cards: DraggableCardState[];
+    onCardClick: (id: number, e: React.MouseEvent) => void;
 }
 
 interface State {
     randomX: number;
     randomY: number;
-    cards: DraggableCardState[];
 }
 
 export class HUD extends React.Component<Props, State> {
     state = {
         randomX: Math.random() * window.innerWidth,
         randomY: Math.random() * window.innerHeight,
-        cards: [
-            {
-                dragging: false,
-                x: 500,
-                y: 400,
-                size: 100,
-                currentX: 0,
-                currentY: 0,
-                label: "Card 1",
-                handness: "Left",
-            },
-        ],
     };
-
-    // static getDerivedStateFromProps(
-    //     props: Readonly<Props>,
-    //     state: Readonly<State>
-    // ) {
-    //     console.log({ props, state });
-    // }
-
-    componentDidMount(): void {
-        this.processing();
-    }
-
-    getHands() {
-        const hands = {
-            Left: this.props.hands.find(
-                (hand) => hand.handedness === "Left"
-            ) as HandState,
-            Right: this.props.hands.find(
-                (hand) => hand.handedness === "Right"
-            ) as HandState,
-        };
-        return hands;
-    }
-
-    getHand(handness: string) {
-        return this.props.hands.find(
-            (hand) => hand.handedness === handness
-        ) as HandState;
-    }
-
-    processing() {
-        this.setState({
-            cards: this.state.cards.map((card) => {
-                if (card.dragging) {
-                    const hand = this.getHand(card.handness);
-                    const pinchPoint = hand.pinchPoint();
-                    const newCard = {
-                        ...card,
-                        x: pinchPoint.x - card.size / 2,
-                        y: pinchPoint.y - card.size / 2,
-                    };
-                    return newCard;
-                }
-                return card;
-            }),
-        });
-        window.requestAnimationFrame(this.processing.bind(this));
-    }
-
-    // shouldComponentUpdate(nextProps: Readonly<Props>): boolean {
-    //     return (
-    //         nextProps.handsCount !== this.props.handsCount ||
-    //         nextProps.poses !== this.props.poses ||
-    //         nextProps.clicks !== this.props.clicks
-    //     );
-    // }
 
     render() {
         // console.log("R: HUD");
@@ -205,22 +128,14 @@ export class HUD extends React.Component<Props, State> {
                     </Button>
                 )}
 
-                {this.state.cards.map((card, index) => {
+                {this.props.cards.map((card, index) => {
                     return this.renderDiv(
                         card.x,
                         card.y,
                         <div
                             key={`card-${index}`}
                             onClick={(e) => {
-                                const cardState = this.state.cards[index];
-                                cardState.dragging = true;
-                                cardState.handness =
-                                    e.detail === 0 ? "Left" : "Right";
-
-                                e.stopPropagation();
-                                this.state.cards[index] = cardState;
-                                console.log("Card clicked", cardState);
-                                this.setState({ cards: this.state.cards });
+                                this.props.onCardClick(card.id, e);
                             }}
                             style={{
                                 border: "1px solid white",
@@ -232,7 +147,8 @@ export class HUD extends React.Component<Props, State> {
                                 alignItems: "center",
                                 color: "white",
                                 padding: "10px",
-                                backgroundColor: "0A0A0A",
+                                backgroundColor:
+                                    card.id % 2 === 0 ? "#0A0A0A" : "#2A2A2A",
                             }}
                         >
                             {card.label}
