@@ -73,10 +73,14 @@ class App2 extends React.Component<Props, State> {
         this.cards.hands = this.hands;
 
         this.drawings.onUpdate = (objects) => {
-            this.setState({ canvasObjects: objects });
+            setTimeout(() => {
+                this.setState({ canvasObjects: objects });
+            }, 0);
         };
         this.cards.onUpdate = (cards) => {
-            this.setState({ cards });
+            setTimeout(() => {
+                this.setState({ cards });
+            }, 0);
         };
         this.cards.onCollide = this.onCardsCollide;
     }
@@ -264,11 +268,12 @@ class App2 extends React.Component<Props, State> {
         y: number,
         isPinched: boolean = true
     ) => {
-        clickElementByCoordinates(x, y, hand.handedness === "Left" ? 0 : 1);
-        this.drawings.addBlip(x, y, {
-            lifetime: 200,
-        });
-        if (!isPinched) {
+        if (isPinched) {
+            clickElementByCoordinates(x, y, hand.handedness === "Left" ? 0 : 1);
+            this.drawings.addBlip(x, y, {
+                lifetime: 200,
+            });
+        } else {
             console.log(hand.pinchTrail);
             this.cards.releaseHand(hand.handedness, hand.pinchTrail);
         }

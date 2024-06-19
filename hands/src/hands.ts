@@ -4,7 +4,7 @@ import {
     calculateAngleBetweenLines,
     distance,
     distance3d,
-    vectorSubtract,
+    // vectorSubtract,
 } from "./utils";
 
 export enum HAND_POSE {
@@ -201,12 +201,15 @@ export class HandState {
     };
 
     serializeHand3D = (hand: CustomHand) => {
-        const center = hand.center3d;
+        // const center = hand.center3d;
+        // const vectors = hand.keypoints3D!.map((kp) => {
+        //     return vectorSubtract(
+        //         [kp.x, kp.y, kp.z!],
+        //         [center.x, center.y, center.z]
+        //     );
+        // });
         const vectors = hand.keypoints3D!.map((kp) => {
-            return vectorSubtract(
-                [kp.x, kp.y, kp.z!],
-                [center.x, center.y, center.z]
-            );
+            return [kp.x, kp.y, kp.z!];
         });
         const vector = vectors.reduce((res, v) => {
             return res.concat(v);

@@ -43,6 +43,7 @@ interface State {
     neurons: string;
     layers: string;
     training?: boolean;
+    modelCode?: string;
 }
 
 export class Training extends React.Component<Props, State> {
@@ -54,7 +55,8 @@ export class Training extends React.Component<Props, State> {
         neurons: "150",
         layers: "1",
         training: false,
-    };
+        modelCode: "",
+    } as State;
 
     timerId: number = 0;
     recordings: CustomHand[] = [];
@@ -386,7 +388,77 @@ export class Training extends React.Component<Props, State> {
                         </Form>
                     </Segment>
                 )}
+                {this.state.currentFrame > 0 || (
+                    <Segment>
+                        <Button onClick={this.onExportModel.bind(this)}>
+                            Export Model
+                        </Button>
+                        {this.state.modelCode && (
+                            <textarea
+                                rows={5}
+                                cols={80}
+                                value={this.state.modelCode}
+                            ></textarea>
+                        )}
+                    </Segment>
+                )}
             </SegmentGroup>
         );
+    }
+
+    async onExportModel() {
+        const modelName = "hands";
+        const base = "tensorflowjs_models/" + modelName + "/";
+        const keys = [
+            `${base}info`,
+            `${base}model_metadata`,
+            `${base}model_topology`,
+            `${base}weight_data`,
+            `${base}weight_specs`,
+            `${base}poses`,
+        ];
+
+        const data = {} as any;
+        keys.forEach((key) => {
+            const ls =
+                key.indexOf("/poses") === -1
+                    ? localStorage.getItem(key)
+                    : JSON.stringify(Object.keys(this.props.records));
+            try {
+                data[key] = JSON.parse(ls || "{}");
+            } catch (e) {
+                data[key] = ls || "";
+            }
+        }) as any;
+
+        const parts = [] as string[];
+
+        keys.forEach((key) => {
+            const value = data[key];
+            parts.push(
+                `localStorage.setItem(\`${key.replace(
+                    "/hands/",
+                    "/${modelName}/"
+                )}\`, ${
+                    typeof value === "string"
+                        ? `"${value}"`
+                        : `JSON.stringify(${JSON.stringify(value)})`
+                })`
+            );
+        });
+
+        const script = `
+
+        export const initDefaultModel = (modelName: string = 'hands') => {
+
+            ${parts.join("\r\n")}
+
+        }
+
+        `;
+
+        this.setState({ modelCode: script });
+
+        console.log(data, script);
     }
 }
