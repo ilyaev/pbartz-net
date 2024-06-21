@@ -13,7 +13,7 @@
     "@reduxjs/toolkit": "^2.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-hand-controller": "^1.0.1",
+    "react-hand-controller": "^1.0.4",
     "react-redux": "^9.1.2",
     "vecti": "^3.0.9"
   },

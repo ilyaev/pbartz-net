@@ -1542,10 +1542,10 @@ react-dom@^18.2.0:
     loose-envify "^1.1.0"
     scheduler "^0.23.2"
 
-react-hand-controller@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/react-hand-controller/-/react-hand-controller-1.0.1.tgz#43d8df5edaba39bfc5161ffd452594a2927fbd81"
-  integrity sha512-v58+8aclSmdQprBj1urUTvBSZX1GDySusqVRCsw4WF2J9IqS6IHyjwH1O/95RpM6h+FnbYPSQj3WZblx2VV0Nw==
+react-hand-controller@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/react-hand-controller/-/react-hand-controller-1.0.4.tgz#25b3caa0e0458c90ba994aa8412a9479a82212c1"
+  integrity sha512-t1Goa9Z06IyqwdoSUj/AHTim0Fw8/rmrBVnUHY5Y1E7obqkC859W8PJtWYYpcxBUUlV7H6ksrSeU4kOwNu0Zyw==
   dependencies:
     "@mediapipe/hands" "^0.4.1675469240"
     "@tensorflow-models/hand-pose-detection" "^2.0.1"

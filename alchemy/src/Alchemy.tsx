@@ -54,6 +54,7 @@ export class AlchemyApp extends React.Component<CombinedProps, State> {
 
     constructor(props: CombinedProps) {
         super(props);
+        localStorage.removeItem("tensorflowjs_models/handsModel/poses");
         this.setupCards();
     }
 
