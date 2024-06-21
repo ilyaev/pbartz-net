@@ -12,7 +12,7 @@ export interface GameConfig {
 
 export enum CARD_COLOR {
     default = "rgba(50,50,50,0.5)",
-    dragging = "rgba(0, 50,0, 0.5)",
+    dragging = "rgba(0, 100,0, 0.7)",
     error = "rgba(50,0,0,0.5)",
     water = "rgba(0,0,150,0.8)",
     fire = "rgba(100,0,0,0.8)",
@@ -481,5 +481,3 @@ GAME_CONFIG.cards = GAME_CONFIG.cards.map((card) => {
     card.parents = getElementParents(card.name);
     return card;
 });
-
-console.log(GAME_CONFIG);

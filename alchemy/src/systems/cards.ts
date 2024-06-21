@@ -1,4 +1,5 @@
-import { HandState } from "../../../../npm-module/react-hand-controller/src";
+// import { HandState } from "../../../../npm-module/react-hand-controller/src";
+import { HandState } from "react-hand-controller";
 
 export interface DraggableCardState {
     dragging: boolean;
@@ -14,12 +15,16 @@ export interface DraggableCardState {
     active: boolean;
     color: string;
     baseColor: string;
+    delta?: { x: number; y: number };
+    t?: number;
 }
 
 export class DraggableCards {
     _currentId = 0;
 
     needSync = true;
+
+    timestamp = 0;
 
     cards: DraggableCardState[] = [];
 
@@ -43,6 +48,7 @@ export class DraggableCards {
             this.cards = defaultCards;
         }
         this._currentId = this.cards.length + 1;
+        this.timestamp = Date.now();
         this.process();
         setTimeout(() => {
             this.needSync = true;
@@ -119,6 +125,7 @@ export class DraggableCards {
     }
 
     process() {
+        const delta = (Date.now() - this.timestamp) / 1000;
         let flag = false;
         const collisions: { [s: number]: number } = {};
         this.cards = this.cards.map((card) => {
@@ -171,13 +178,24 @@ export class DraggableCards {
             } else {
                 const newCard = { ...card };
                 if (
-                    newCard.velocity > 0 &&
-                    (newCard.direction[0] !== 0 || newCard.direction[1] !== 0)
+                    newCard.t ||
+                    (newCard.velocity > 0 &&
+                        (newCard.direction[0] !== 0 ||
+                            newCard.direction[1] !== 0))
                 ) {
-                    newCard.velocity += newCard.acceleration;
-                    newCard.x -= newCard.direction[0] * newCard.velocity;
-                    newCard.y -= newCard.direction[1] * newCard.velocity;
-
+                    if (newCard.t && newCard.delta) {
+                        newCard.t = Math.max(0, newCard.t - delta);
+                        newCard.x += newCard.delta.x * delta;
+                        newCard.y += newCard.delta.y * delta;
+                        if (newCard.t <= 0) {
+                            console.log("Deactivating", newCard.label);
+                            newCard.active = false;
+                        }
+                    } else {
+                        newCard.velocity += newCard.acceleration;
+                        newCard.x -= newCard.direction[0] * newCard.velocity;
+                        newCard.y -= newCard.direction[1] * newCard.velocity;
+                    }
                     // newCard.velocity -= 0.2;
                     flag = true;
                     return this.boundCard(newCard);
@@ -194,6 +212,7 @@ export class DraggableCards {
         if (flag || this.needSync) {
             this.sync();
         }
+        this.timestamp = Date.now();
         window.requestAnimationFrame(() => this.process());
     }
 

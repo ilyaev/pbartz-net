@@ -1,10 +1,11 @@
 import React from "react";
 import { connect } from "react-redux";
-import { HandController } from "../../../npm-module/react-hand-controller/src/HandController";
+// import { HandController } from "../../../npm-module/react-hand-controller/src/HandController";
+import { HandController, HandState } from "react-hand-controller";
 import { RootState, AppDispatch } from "./store";
 import { addCard, deleteCard, processCards, updateCard } from "./store/cards";
 import AlchemyCards from "./components/cards";
-import { HandState } from "../../../npm-module/react-hand-controller/src/HandController/hands";
+// import { HandState } from "../../../npm-module/react-hand-controller/src/HandController/hands";
 import { DraggableCards, DraggableCardState } from "./systems/cards";
 import { CARD_COLOR, ELEMENTS_MAP, GAME_CONFIG } from "./store/game";
 import { HUD } from "./components/hud";
@@ -15,6 +16,8 @@ interface State {
     cards: DraggableCardState[];
     score: number;
     finals: string[];
+    loaded: boolean;
+    handsCount: number;
 }
 
 const mapStateToProps = (state: RootState) => {
@@ -42,7 +45,10 @@ export class AlchemyApp extends React.Component<CombinedProps, State> {
         cards: [] as DraggableCardState[],
         score: 0,
         finals: [] as string[],
+        loaded: false,
+        handsCount: 0,
     };
+
     hands: HandState[] = [] as HandState[];
     cards: DraggableCards = new DraggableCards();
 
@@ -68,10 +74,18 @@ export class AlchemyApp extends React.Component<CombinedProps, State> {
                         showCenter: false,
                         showPose: false,
                     }}
+                    onModelLoaded={() => {
+                        this.setState({ loaded: true });
+                    }}
                     onHandUpdate={this.onHandsUpdate.bind(this)}
                     onPinch={this.onPinch.bind(this)}
                 />
-                <HUD score={this.state.score} finals={this.state.finals} />
+                <HUD
+                    score={this.state.score}
+                    finals={this.state.finals}
+                    loaded={this.state.loaded}
+                    handsCount={this.state.handsCount}
+                />
             </>
         );
     }
@@ -149,9 +163,13 @@ export class AlchemyApp extends React.Component<CombinedProps, State> {
                     flag = false;
                 }
             });
-            if (flag) {
-                card.active = false;
-                console.log("deactivating", card.label);
+            if (flag && !card.t) {
+                // card.active = false;
+                card.delta = {
+                    x: card.x * -1 + Math.random() * 100 - 50,
+                    y: card.y * -1 + Math.random() * 800 + 50,
+                };
+                card.t = 0.9;
             }
             return card;
         });
@@ -159,7 +177,7 @@ export class AlchemyApp extends React.Component<CombinedProps, State> {
             this.setState({
                 score: (existing.length / total) * 100,
                 finals: result
-                    .filter((card) => !card.active)
+                    .filter((card) => !card.active || card.t! > 0)
                     .map((card) => card.label),
             });
         }, 0);
@@ -168,6 +186,9 @@ export class AlchemyApp extends React.Component<CombinedProps, State> {
 
     onHandsUpdate(hands: HandState[]) {
         this.hands = hands;
+        if (this.state.handsCount !== hands.length) {
+            this.setState({ handsCount: hands.length });
+        }
         if (!this.cards.hands.Left) {
             this.cards.hands.Left = this.hands.find(
                 (h) => h.handedness === "Left"
