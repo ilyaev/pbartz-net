@@ -37,6 +37,7 @@ export class SandBox extends React.Component<Props, State> {
                     acceleration: 0,
                     velocity: 0,
                     active: true,
+                    baseColor: card.color || CARD_COLOR.default,
                     color: CARD_COLOR.default,
                 };
             });

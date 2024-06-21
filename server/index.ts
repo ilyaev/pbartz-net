@@ -9,6 +9,7 @@ const DOMAIN_MAP = {
     deepcompare: "deepcompare",
     playlistspot: "spot",
     spending: "finances",
+    alchemy: "alchemy",
 } as any;
 
 const EXCLUSIONS = ["favicon.ico", ".env"];
