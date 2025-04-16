@@ -19,11 +19,13 @@ interface Props {
 
 let TIMER_ID;
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 class FinToolbar extends Component<Props, State> {
     state = {
         search: "",
         categories: [],
-        date: "2024-",
+        date: `${CURRENT_YEAR}-`,
         initialized: false,
     };
 
@@ -50,7 +52,7 @@ class FinToolbar extends Component<Props, State> {
             state.categories = [];
         }
         if (typeof state.date === "undefined") {
-            state.date = "2024-";
+            state.date = `${CURRENT_YEAR}-`;
         }
 
         // const isInitialized = this.state.initialized;
@@ -146,13 +148,13 @@ class FinToolbar extends Component<Props, State> {
                             this.setState({
                                 search: "",
                                 categories: [],
-                                date: "2024-",
+                                date: `${CURRENT_YEAR}-`,
                             });
                             this.props.onChange(
                                 {
                                     search: "",
                                     categories: [],
-                                    date: "2024-",
+                                    date: `${CURRENT_YEAR}-`,
                                     initialized: true,
                                 },
                                 false
